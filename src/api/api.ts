@@ -1,4 +1,5 @@
 import { RegisterForm } from '../features/auth/validators/authValidator';
+import type { AppLanguage } from '../theme/AppPreferencesProvider';
 
 /**
  * Interfacce per i modelli dati
@@ -46,6 +47,7 @@ export interface Post {
   descrizione: string;
   tempo: string;
   builders: number;
+  language?: AppLanguage;
 }
 
 /**
@@ -171,6 +173,7 @@ export const getFeed = async (): Promise<ApiResponse<Post[]>> => {
         descrizione: 'Cerchiamo un giovane sviluppatore appassionato di AI per collaborare al lancio della nostra piattaforma.',
         tempo: '2 ore fa',
         builders: 12,
+        language: 'it',
       },
       {
         id: '2',
@@ -179,6 +182,7 @@ export const getFeed = async (): Promise<ApiResponse<Post[]>> => {
         descrizione: 'Startup in fase embrionale cerca collaboratori creativi per sviluppare soluzioni green nel settore energetico.',
         tempo: '5 ore fa',
         builders: 8,
+        language: 'it',
       },
       {
         id: '3',
@@ -187,6 +191,7 @@ export const getFeed = async (): Promise<ApiResponse<Post[]>> => {
         descrizione: 'Progetto innovativo nel mondo del design cerca talenti under 25 con voglia di fare esperienza reale.',
         tempo: '1 giorno fa',
         builders: 24,
+        language: 'it',
       },
       {
         id: '4',
@@ -195,6 +200,7 @@ export const getFeed = async (): Promise<ApiResponse<Post[]>> => {
         descrizione: 'Cerchiamo giovani appassionati di finanza e tecnologia per rivoluzionare i pagamenti digitali.',
         tempo: '2 giorni fa',
         builders: 6,
+        language: 'it',
       },
     ],
     error: null,

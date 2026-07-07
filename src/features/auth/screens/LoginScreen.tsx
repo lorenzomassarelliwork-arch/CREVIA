@@ -2,8 +2,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -13,6 +11,10 @@ import { COLORS } from '../../../theme/colors';
 import type { RootStackParamList } from '../../../navigation/types';
 import { loginUser } from '../services/authService';
 import { validateLogin } from '../validators/authValidator';
+import {
+  LocalizedText as Text,
+  LocalizedTextInput as TextInput,
+} from '../../../i18n/LocalizedText';
 
 type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -55,7 +57,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         <TextInput
           style={[styles.input, error ? styles.inputError : null]}
           placeholder="Email"
-          placeholderTextColor="#8A8A9A"
+          placeholderTextColor={COLORS.gray}
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
@@ -67,7 +69,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         <TextInput
           style={[styles.input, error ? styles.inputError : null]}
           placeholder="Password"
-          placeholderTextColor="#8A8A9A"
+          placeholderTextColor={COLORS.gray}
           secureTextEntry
           value={password}
           onChangeText={(value) => {
@@ -90,7 +92,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={COLORS.white} />
           ) : (
             <Text style={styles.buttonText}>Accedi</Text>
           )}

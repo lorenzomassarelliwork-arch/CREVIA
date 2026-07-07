@@ -1,0 +1,76 @@
+import { StyleSheet } from 'react-native';
+
+import type { ColorPalette } from '../../../theme/colors';
+
+export default function createStyles(colors: ColorPalette) {
+  return StyleSheet.create({
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 28,
+      marginBottom: 10,
+    },
+    sectionTitle: { color: colors.textStrong, fontSize: 16, fontWeight: '800' },
+    sectionCount: { color: colors.gray, fontSize: 13, fontWeight: '700' },
+    emptyMedia: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 120,
+      borderRadius: 17,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyMediaText: { color: colors.textMuted, fontSize: 13, marginTop: 9 },
+    mediaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    imageTile: {
+      width: '31%',
+      aspectRatio: 1,
+      overflow: 'hidden',
+      borderRadius: 13,
+      backgroundColor: colors.surfaceMuted,
+    },
+    mediaImage: { width: '100%', height: '100%' },
+    mediaDate: {
+      position: 'absolute',
+      right: 5,
+      bottom: 5,
+      color: colors.white,
+      fontSize: 9,
+      fontWeight: '700',
+      textShadowColor: colors.overlay,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
+    },
+    audioTile: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+      padding: 12,
+      borderRadius: 14,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    audioDate: { color: colors.gray, fontSize: 10 },
+    previewContainer: { flex: 1, backgroundColor: colors.background },
+    previewClose: {
+      position: 'absolute',
+      top: 52,
+      right: 18,
+      zIndex: 2,
+      width: 42,
+      height: 42,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 14,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    previewImage: { flex: 1, width: '100%', height: '100%' },
+  });
+}

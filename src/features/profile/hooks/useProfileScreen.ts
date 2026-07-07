@@ -13,6 +13,8 @@ import {
   updateProject,
 } from '../services/profileService';
 import type { Experience, Profile, Project } from '../services/profileService';
+import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { translateUi } from '../../../i18n/uiTranslations';
 
 export type FormattedExperience = Experience & {
   periodo: string;
@@ -60,6 +62,7 @@ const INITIAL_EXPERIENCE: Experience = {
 };
 
 export function useProfileScreen() {
+  const { language } = useAppPreferences();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [draftProfile, setDraftProfile] = useState<Profile>(INITIAL_PROFILE);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -225,12 +228,12 @@ export function useProfileScreen() {
     const projectId = selectedProject.id;
 
     Alert.alert(
-      'Elimina Pagina Progetto',
-      'Sei sicuro di voler eliminare definitivamente questa pagina progetto?',
+      translateUi('Elimina Pagina Progetto', language),
+      translateUi('Sei sicuro di voler eliminare definitivamente questa pagina progetto?', language),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: translateUi('Annulla', language), style: 'cancel' },
         {
-          text: 'Elimina',
+          text: translateUi('Elimina', language),
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
@@ -245,7 +248,7 @@ export function useProfileScreen() {
       ],
       { cancelable: true }
     );
-  }, [selectedProject, closeProjectModal]);
+  }, [selectedProject, closeProjectModal, language]);
 
   const openExperienceModal = useCallback((experience: Experience) => {
     setSelectedExperience({ ...experience });
@@ -292,12 +295,12 @@ export function useProfileScreen() {
     const experienceId = selectedExperience.id;
 
     Alert.alert(
-      'Elimina Esperienza',
-      'Sei sicuro di voler eliminare definitivamente questa esperienza?',
+      translateUi('Elimina Esperienza', language),
+      translateUi('Sei sicuro di voler eliminare definitivamente questa esperienza?', language),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: translateUi('Annulla', language), style: 'cancel' },
         {
-          text: 'Elimina',
+          text: translateUi('Elimina', language),
           style: 'destructive',
           onPress: async () => {
             setLoading(true);
@@ -312,7 +315,7 @@ export function useProfileScreen() {
       ],
       { cancelable: true }
     );
-  }, [selectedExperience, closeExperienceModal]);
+  }, [selectedExperience, closeExperienceModal, language]);
 
   const updateSelectedExperienceValue = useCallback(<K extends keyof Experience>(key: K, value: Experience[K]) => {
     setSelectedExperience((current) => current ? ({ ...current, [key]: value }) : current);

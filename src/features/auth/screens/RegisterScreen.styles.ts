@@ -175,9 +175,9 @@ const nativeStyles = StyleSheet.create({
 
 const webDateInput: CSSProperties = {
   border: 'none',
-  background: 'transparent',
+  background: COLORS.transparent,
   fontSize: 16,
-  color: '#1A1A2E',
+  color: COLORS.textStrong,
   width: '100%',
   outline: 'none',
   cursor: 'pointer',

@@ -1,11 +1,16 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { MaterialTopTabScreenProps } from '@react-navigation/material-top-tabs';
 import type { MainTabParamList } from '../../../navigation/types';
-import { COLORS } from '../../../theme/colors';
+import type { ColorPalette } from '../../../theme/colors';
+import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import {
+  LocalizedText as Text,
+  LocalizedTextInput as TextInput,
+} from '../../../i18n/LocalizedText';
 
-type SearchScreenProps = BottomTabScreenProps<MainTabParamList, 'Search'>;
+type SearchScreenProps = MaterialTopTabScreenProps<MainTabParamList, 'Search'>;
 
 type PersonResult = {
   id: string;
@@ -43,6 +48,8 @@ const progetti: ProjectResult[] = [
 ];
 
 export default function SearchScreen({ navigation }: SearchScreenProps) {
+  const { colors } = useAppPreferences();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [query, setQuery] = useState<string>('');
   const [filtro, setFiltro] = useState<SearchFilter>('tutti');
 
@@ -62,21 +69,21 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
       <View style={styles.header}>
         {navigation.canGoBack() && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1A1A2E" />
+            <Ionicons name="arrow-back" size={24} color={colors.textStrong} />
           </TouchableOpacity>
         )}
         <View style={[styles.searchBar, !navigation.canGoBack() && { marginLeft: 0 }] }>
-          <Ionicons name="search-outline" size={18} color={COLORS.gray} />
+          <Ionicons name="search-outline" size={18} color={colors.gray} />
           <TextInput
             style={styles.searchInput}
             placeholder="Cerca persone o progetti..."
-            placeholderTextColor={COLORS.gray}
+            placeholderTextColor={colors.gray}
             value={query}
             onChangeText={setQuery}
           />
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color={COLORS.gray} />
+              <Ionicons name="close-circle" size={18} color={colors.gray} />
             </TouchableOpacity>
           )}
         </View>
@@ -102,7 +109,7 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
         {query.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="search" size={48} color="#e8edff" />
+            <Ionicons name="search" size={48} color={colors.border} />
             <Text style={styles.emptyTitle}>Cerca su CREVIA</Text>
             <Text style={styles.emptySubtitle}>Trova persone, builders e progetti</Text>
           </View>
@@ -110,7 +117,7 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
 
         {query.length > 0 && risultati.length === 0 && (
           <View style={styles.emptyState}>
-            <Ionicons name="sad-outline" size={48} color="#E8EDFF" />
+            <Ionicons name="sad-outline" size={48} color={colors.border} />
             <Text style={styles.emptyTitle}>Nessun risultato</Text>
             <Text style={styles.emptySubtitle}>Prova con un altro termine</Text>
           </View>
@@ -120,9 +127,9 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
           <TouchableOpacity key={item.id} style={styles.card}>
             <View style={styles.cardAvatar}>
               {item.tipo === 'persona' ? (
-                <Ionicons name="person" size={22} color={COLORS.primary} />
+                <Ionicons name="person" size={22} color={colors.primary} />
               ) : (
-                <FontAwesome5 name="building" size={18} color={COLORS.primary} />
+                <FontAwesome5 name="building" size={18} color={colors.primary} />
               )}
             </View>
             <View style={styles.cardInfo}>
@@ -145,7 +152,7 @@ export default function SearchScreen({ navigation }: SearchScreenProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ColorPalette) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -156,7 +163,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 55,
     paddingBottom: 15,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.cardBackground,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     gap: 12,
@@ -225,7 +232,7 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
   },
   card: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 16,
     padding: 16,
     flexDirection: 'row',

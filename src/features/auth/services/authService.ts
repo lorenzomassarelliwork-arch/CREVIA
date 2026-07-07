@@ -1,5 +1,6 @@
 import { resetPassword, login, register } from '../../../api/api';
 import type { RegisterForm } from '../validators/authValidator';
+import { updateAccountEmail } from './accountSecurityService';
 
 type AuthServiceResult<TData = null> =
   | {
@@ -36,6 +37,8 @@ export const loginUser = async (
         error,
       };
     }
+
+    await updateAccountEmail(data?.email ?? email);
 
     return {
       success: true,
@@ -100,6 +103,8 @@ export const registerUser = async (
         error,
       };
     }
+
+    await updateAccountEmail(form.email);
 
     return {
       success: true,

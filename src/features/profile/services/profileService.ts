@@ -1,9 +1,12 @@
+import type { AppLanguage } from '../../../theme/AppPreferencesProvider';
+
 export type Profile = {
   id?: string;
   nome: string;
   ruolo: string;
   settore: string;
   bio: string;
+  bioLanguage?: AppLanguage;
   foto?: string | null;
   collegamenti: number;
   seguaci: number;
@@ -42,6 +45,13 @@ export type ServiceResult<T> = {
   error?: string | null;
 };
 
+export type AppPreferences = {
+  notifichePush: boolean;
+  emailAggiornamenti: boolean;
+  suggerimentiPersonalizzati: boolean;
+  feedbackTattile: boolean;
+};
+
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -51,6 +61,7 @@ let fakeProfile: Profile = {
   ruolo: 'Founder',
   settore: 'Prodotti Digitali',
   bio: 'Appassionato di UX e startup digitali con una forte propensione al design e ai progetti che uniscono creatività e tecnologia.',
+  bioLanguage: 'it',
   foto: null,
   collegamenti: 128,
   seguaci: 342,
@@ -104,6 +115,13 @@ let fakeExperiences: Experience[] = [
   },
 ];
 
+let fakeAppPreferences: AppPreferences = {
+  notifichePush: true,
+  emailAggiornamenti: true,
+  suggerimentiPersonalizzati: true,
+  feedbackTattile: false,
+};
+
 export async function getProfile(): Promise<ServiceResult<Profile>> {
   await delay(250);
   return { data: { ...fakeProfile } };
@@ -115,6 +133,19 @@ export async function updateProfile(
   await delay(250);
   fakeProfile = { ...fakeProfile, ...profile };
   return { data: { ...fakeProfile }, error: null };
+}
+
+export async function getAppPreferences(): Promise<ServiceResult<AppPreferences>> {
+  await delay(250);
+  return { data: { ...fakeAppPreferences }, error: null };
+}
+
+export async function updateAppPreferences(
+  preferences: Partial<AppPreferences>
+): Promise<ServiceResult<AppPreferences>> {
+  await delay(250);
+  fakeAppPreferences = { ...fakeAppPreferences, ...preferences };
+  return { data: { ...fakeAppPreferences }, error: null };
 }
 
 export async function getProjects(): Promise<ServiceResult<Project[]>> {

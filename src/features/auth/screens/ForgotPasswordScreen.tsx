@@ -2,8 +2,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -13,6 +11,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { COLORS } from '../../../theme/colors';
 import type { RootStackParamList } from '../../../navigation/types';
 import { requestPasswordReset } from '../services/authService';
+import {
+  LocalizedText as Text,
+  LocalizedTextInput as TextInput,
+} from '../../../i18n/LocalizedText';
 
 type ForgotPasswordScreenProps = NativeStackScreenProps<
   RootStackParamList,

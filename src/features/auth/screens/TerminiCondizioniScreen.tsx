@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../../navigation/types';
 import { COLORS } from '../../../theme/colors'; // importazione dei colori dell'app
+import { LocalizedText as Text } from '../../../i18n/LocalizedText';
 
 type TerminiCondizioniScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -20,8 +20,10 @@ type TerminiCondizioniScreenProps = NativeStackScreenProps<
 
 export default function TerminiCondizioniScreen({
   navigation,
+  route,
 }: TerminiCondizioniScreenProps) {
   const [haLetto, setHaLetto] = useState<boolean>(false);
+  const isViewMode = route.params?.mode === 'view';
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
@@ -30,6 +32,10 @@ export default function TerminiCondizioniScreen({
   };
 
   const handleAccetta = () => {
+    if (isViewMode) {
+      navigation.goBack();
+      return;
+    }
     navigation.navigate('Register', { terminiAccettati: true });
   };
 
@@ -39,16 +45,16 @@ export default function TerminiCondizioniScreen({
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#1A1A2E" />
+          <Ionicons name="arrow-back" size={24} color={COLORS.textStrong} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Termini e Condizioni</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {/* Avviso lettura */}
-      {!haLetto && (
+      {!isViewMode && !haLetto && (
         <View style={styles.avviso}>
-          <Ionicons name="information-circle-outline" size={18} color="#4F6EF7" />
+          <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
           <Text style={styles.avvisoText}>Scorri fino in fondo per accettare</Text>
         </View>
       )}
@@ -155,18 +161,18 @@ export default function TerminiCondizioniScreen({
       {/* Pulsante Ho compreso */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.button, !haLetto && styles.buttonDisabled]}
+          style={[styles.button, !isViewMode && !haLetto && styles.buttonDisabled]}
           onPress={handleAccetta}
-          disabled={!haLetto}
+          disabled={!isViewMode && !haLetto}
         >
           <Ionicons
-            name={haLetto ? 'checkmark-circle-outline' : 'lock-closed-outline'}
+            name={isViewMode ? 'close-circle-outline' : haLetto ? 'checkmark-circle-outline' : 'lock-closed-outline'}
             size={20}
-            color="#FFFFFF"
+            color={COLORS.white}
             style={{ marginRight: 8 }}
           />
           <Text style={styles.buttonText}>
-            {haLetto ? 'Ho compreso e accetto' : 'Scorri per continuare'}
+            {isViewMode ? 'Chiudi' : haLetto ? 'Ho compreso e accetto' : 'Scorri per continuare'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -254,7 +260,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonDisabled: {
-    backgroundColor:'#A0A0A0',
+    backgroundColor: COLORS.disabled,
   },
   buttonText: {
     color: COLORS.background,

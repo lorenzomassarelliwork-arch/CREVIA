@@ -4,8 +4,6 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  Text,
-  TextInput,
   type TextInputProps,
   TouchableOpacity,
   View,
@@ -18,8 +16,15 @@ import { City, Country } from 'country-state-city';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../../../navigation/types';
+import { COLORS } from '../../../theme/colors';
 import { useRegisterForm } from '../hooks/useRegisterForm';
 import styles from './RegisterScreen.styles';
+import {
+  LocalizedText as Text,
+  LocalizedTextInput as TextInput,
+} from '../../../i18n/LocalizedText';
+import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { translateUi } from '../../../i18n/uiTranslations';
 
 type RegisterScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -84,8 +89,8 @@ type DateFieldProps = {
 
 const genereOptions = ['Uomo', 'Donna', 'Non binario', 'Preferisco non dirlo'];
 const mansioniOptions: DropdownOption[] = [
-  { value: 'Studente', label: 'ðŸŽ“ Studente' },
-  { value: 'Lavoratore', label: 'ðŸ’¼ Lavoratore' },
+  { value: 'Studente', label: '🎓 Studente' },
+  { value: 'Lavoratore', label: '💼 Lavoratore' },
 ];
 
 function FormTextInput({ error, ...props }: FormTextInputProps) {
@@ -148,8 +153,11 @@ function DropdownField({
   label,
   error,
   disabled,
+  placeholder,
+  searchPlaceholder,
   ...props
 }: DropdownFieldProps) {
+  const { language } = useAppPreferences();
   return (
     <>
       <FormLabel title={label} />
@@ -163,6 +171,10 @@ function DropdownField({
         selectedTextStyle={styles.dropdownSelected}
         inputSearchStyle={styles.dropdownSearch}
         disable={disabled}
+        placeholder={translateUi(placeholder ?? '', language)}
+        searchPlaceholder={
+          searchPlaceholder ? translateUi(searchPlaceholder, language) : undefined
+        }
         {...props}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -182,7 +194,7 @@ function CheckboxRow({
       <TouchableOpacity style={styles.checkboxContainer} onPress={onPress}>
         <View style={[styles.checkbox, checked && styles.checkboxActive]}>
           {checked ? (
-            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={14} color={COLORS.white} />
           ) : null}
         </View>
         <Text style={styles.checkboxText}>{children || label}</Text>
@@ -202,6 +214,7 @@ function DateField({
   onDateChange,
   onWebDateChange,
 }: DateFieldProps) {
+  const { language } = useAppPreferences();
   return (
     <>
       <FormLabel title={label} />
@@ -233,7 +246,7 @@ function DateField({
           display="default"
           onChange={onDateChange}
           maximumDate={new Date()}
-          locale="it-IT"
+          locale={language === 'it' ? 'it-IT' : 'en-US'}
         />
       ) : null}
     </>
@@ -285,7 +298,7 @@ export default function RegisterScreen({
       <View style={styles.form}>
         <FormTextInput
           placeholder="Nome *"
-          placeholderTextColor="#8A8A9A"
+          placeholderTextColor={COLORS.gray}
           value={form.nome}
           onChangeText={(value) => handleChange('nome', value)}
           error={errors.nome}
@@ -293,7 +306,7 @@ export default function RegisterScreen({
 
         <FormTextInput
           placeholder="Cognome *"
-          placeholderTextColor="#8A8A9A"
+          placeholderTextColor={COLORS.gray}
           value={form.cognome}
           onChangeText={(value) => handleChange('cognome', value)}
           error={errors.cognome}
@@ -322,7 +335,7 @@ export default function RegisterScreen({
 
         <FormTextInput
           placeholder="Email *"
-          placeholderTextColor="#8A8A9A"
+          placeholderTextColor={COLORS.gray}
           keyboardType="email-address"
           autoCapitalize="none"
           value={form.email}
@@ -340,7 +353,7 @@ export default function RegisterScreen({
 
         <FormTextInput
           placeholder="Settore di interesse (facoltativo)"
-          placeholderTextColor="#8A8A9A"
+          placeholderTextColor={COLORS.gray}
           value={form.settore}
           onChangeText={(value) => handleChange('settore', value)}
         />
@@ -363,16 +376,16 @@ export default function RegisterScreen({
         />
 
         <DropdownField
-          label="CittÃ  di residenza *"
+          label="Città di residenza *"
           data={form.statoResidenza ? getCitta(form.statoResidenza) : []}
           search
           maxHeight={300}
           labelField="label"
           valueField="value"
           placeholder={
-            form.statoResidenza ? 'Seleziona cittÃ ' : 'Prima seleziona lo stato'
+            form.statoResidenza ? 'Seleziona città' : 'Prima seleziona lo stato'
           }
-          searchPlaceholder="Cerca cittÃ ..."
+          searchPlaceholder="Cerca città..."
           value={form.cittaResidenza}
           onChange={(item) => handleChange('cittaResidenza', item.value)}
           error={errors.cittaResidenza}
@@ -397,16 +410,16 @@ export default function RegisterScreen({
         />
 
         <DropdownField
-          label="CittÃ  di domicilio *"
+          label="Città di domicilio *"
           data={form.statoDomicilio ? getCitta(form.statoDomicilio) : []}
           search
           maxHeight={300}
           labelField="label"
           valueField="value"
           placeholder={
-            form.statoDomicilio ? 'Seleziona cittÃ ' : 'Prima seleziona lo stato'
+            form.statoDomicilio ? 'Seleziona città' : 'Prima seleziona lo stato'
           }
-          searchPlaceholder="Cerca cittÃ ..."
+          searchPlaceholder="Cerca città..."
           value={form.cittaDomicilio}
           onChange={(item) => handleChange('cittaDomicilio', item.value)}
           error={errors.cittaDomicilio}
@@ -445,7 +458,7 @@ export default function RegisterScreen({
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={COLORS.white} />
           ) : (
             <Text style={styles.buttonText}>Crea account</Text>
           )}
@@ -453,7 +466,7 @@ export default function RegisterScreen({
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Hai giÃ  un account? </Text>
+        <Text style={styles.footerText}>Hai già un account? </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
           <Text style={styles.link}>Accedi</Text>
         </TouchableOpacity>

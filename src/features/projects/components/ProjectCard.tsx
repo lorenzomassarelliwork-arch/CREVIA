@@ -1,7 +1,10 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { COLORS } from '../../../theme/colors'; // Importa dal percorso corretto
+import type { ColorPalette } from '../../../theme/colors';
+import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { LocalizedText as Text } from '../../../i18n/LocalizedText';
+import { TranslatedContent } from '../../../i18n/TranslatedContent';
 import type { Post } from '../../../api/api';
 
 export type ProjectCardPost = Post;
@@ -11,11 +14,13 @@ type ProjectCardProps = {
 };
 
 export default function ProjectCard({ post }: ProjectCardProps) {
+  const { colors } = useAppPreferences();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <TouchableOpacity style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardAvatar}>
-          <FontAwesome5 name="building" size={18} color={COLORS.primary} />
+          <FontAwesome5 name="building" size={18} color={colors.primary} />
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.cardAzienda}>{post.azienda}</Text>
@@ -23,10 +28,15 @@ export default function ProjectCard({ post }: ProjectCardProps) {
         </View>
         <Text style={styles.cardTempo}>{post.tempo}</Text>
       </View>
-      <Text style={styles.cardDescrizione}>{post.descrizione}</Text>
+      <TranslatedContent
+        contentId={`post:${post.id}`}
+        sourceLanguage={post.language ?? 'it'}
+        text={post.descrizione}
+        style={styles.cardDescrizione}
+      />
       <View style={styles.cardFooter}>
         <View style={styles.buildersContainer}>
-          <Ionicons name="people-outline" size={16} color={COLORS.gray} />
+          <Ionicons name="people-outline" size={16} color={colors.gray} />
           <Text style={styles.buildersText}>{post.builders} builders</Text>
         </View>
         <TouchableOpacity style={styles.candidatiButton}>
@@ -37,13 +47,13 @@ export default function ProjectCard({ post }: ProjectCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
   card: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 18,
     gap: 12,
-    shadowColor: COLORS.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -59,7 +69,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: '#E8EDFF',
+    backgroundColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -69,20 +79,20 @@ const styles = StyleSheet.create({
   cardAzienda: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.secondary,
+    color: colors.secondary,
   },
   cardSettore: {
     fontSize: 13,
-    color: COLORS.primary,
+    color: colors.primary,
     marginTop: 2,
   },
   cardTempo: {
     fontSize: 12,
-    color: COLORS.gray,
+    color: colors.gray,
   },
   cardDescrizione: {
     fontSize: 14,
-    color: COLORS.secondary,
+    color: colors.secondary,
     lineHeight: 22,
   },
   cardFooter: {
@@ -97,16 +107,16 @@ const styles = StyleSheet.create({
   },
   buildersText: {
     fontSize: 13,
-    color: COLORS.gray,
+    color: colors.gray,
   },
   candidatiButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
   candidatiText: {
-    color: COLORS.white,
+    color: colors.white,
     fontSize: 13,
     fontWeight: 'bold',
   },

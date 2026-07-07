@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
     },
@@ -23,7 +23,35 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      "expo-system-ui",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Consenti a Crevia di usare Face ID per proteggere il tuo accesso."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Consenti a Crevia di accedere ai contatti per trovare persone che conosci."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Consenti a Crevia di accedere alle foto che vuoi condividere in chat.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Consenti a Crevia di usare il microfono per registrare messaggi vocali."
+        }
+      ],
+      "expo-asset"
     ]
   }
 }

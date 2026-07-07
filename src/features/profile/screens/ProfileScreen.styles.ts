@@ -1,7 +1,8 @@
 import { StyleSheet } from 'react-native';
-import { COLORS } from '../../../theme/colors';
+import type { ColorPalette } from '../../../theme/colors';
 
-export default StyleSheet.create({
+export default function createStyles(COLORS: ColorPalette) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     flexDirection: 'row',
@@ -17,7 +18,7 @@ export default StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.secondary },
   headerIconsContainer: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   headerIcon: { padding: 4, borderRadius: 8 },
-  headerIconActive: { backgroundColor: '#E8F8F0' },
+  headerIconActive: { backgroundColor: COLORS.successSoft },
   scrollContent: { padding: 20, paddingBottom: 100 },
   profileCard: {
     backgroundColor: COLORS.cardBackground,
@@ -50,12 +51,12 @@ export default StyleSheet.create({
   },
   profileName: { fontSize: 20, fontWeight: 'bold', color: COLORS.secondary },
   profileRuolo: { fontSize: 13, color: COLORS.primary, fontWeight: '600', marginTop: 4 },
-  bioText: { fontSize: 13, color: '#5A5A6A', textAlign: 'center', marginTop: 10 },
+  bioText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 10 },
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 16,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.surfaceMuted,
     paddingVertical: 10,
     borderRadius: 12,
     width: '100%',
@@ -84,7 +85,7 @@ export default StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8F9FA',
+    borderBottomColor: COLORS.surfaceMuted,
   },
   eyeButton: {
     width: 34,
@@ -95,7 +96,7 @@ export default StyleSheet.create({
     marginRight: 10,
   },
   eyeButtonActive: {
-    backgroundColor: '#E8F8F0',
+    backgroundColor: COLORS.successSoft,
   },
   privacyButton: {
     width: 42,
@@ -107,15 +108,15 @@ export default StyleSheet.create({
     borderColor: COLORS.border,
   },
   privacyButtonActive: {
-    backgroundColor: '#E8F8F0',
-    borderColor: '#2ECC71',
+    backgroundColor: COLORS.successSoft,
+    borderColor: COLORS.confirm,
   },
   dataLabel: { fontSize: 11, color: COLORS.gray },
   dataValue: { fontSize: 13, fontWeight: '600', color: COLORS.secondary, marginTop: 1 },
   editUserForm: { width: '100%', gap: 6 },
   editLabel: { fontSize: 11, fontWeight: '700', color: COLORS.gray },
   editInput: {
-    backgroundColor: '#F0F3FF',
+    backgroundColor: COLORS.inputSurface,
     borderRadius: 8,
     padding: 8,
     fontSize: 14,
@@ -125,8 +126,8 @@ export default StyleSheet.create({
     padding: 12,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#FFCCD1',
-    backgroundColor: '#FFF5F5',
+    borderColor: COLORS.dangerBorder,
+    backgroundColor: COLORS.dangerSoft,
     alignItems: 'center',
     marginTop: 8,
   },
@@ -143,7 +144,7 @@ export default StyleSheet.create({
     marginBottom: 16,
   },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 9 },
-  tabButtonActive: { backgroundColor: '#FFFFFF' },
+  tabButtonActive: { backgroundColor: COLORS.white },
   tabText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
   tabTextActive: { color: COLORS.secondary },
   tabContent: { gap: 12 },
@@ -170,11 +171,11 @@ export default StyleSheet.create({
   btnModificaRecord: { backgroundColor: COLORS.primary, padding: 8, borderRadius: 8 },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: COLORS.overlay,
     justifyContent: 'flex-end',
   },
   actionSheetContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -201,14 +202,14 @@ export default StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 14,
     borderRadius: 14,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: COLORS.actionSurface,
     marginBottom: 12,
   },
   actionSheetBtnText: { fontSize: 15, color: COLORS.secondary, fontWeight: '600' },
   actionSheetCancelBtn: {
     borderBottomWidth: 0,
     marginTop: 8,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: COLORS.dangerSoft,
   },
   actionSheetCancelText: {
     color: COLORS.delete,
@@ -220,17 +221,18 @@ export default StyleSheet.create({
     left: 0,
     right: 0,
     height: 70,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
   navItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  navText: { fontSize: 11, color: '#8A8A9A', marginTop: 4 },
-});
+  navText: { fontSize: 11, color: COLORS.gray, marginTop: 4 },
+  });
+}
 
-export const modalStyles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
+export const createModalStyles = (COLORS: ColorPalette) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.white },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -275,7 +277,7 @@ export const modalStyles = StyleSheet.create({
     gap: 10,
     marginVertical: 6,
   },
-  checkboxLabel: { fontSize: 13, color: '#5A5A6A', fontWeight: '500' },
+  checkboxLabel: { fontSize: 13, color: COLORS.textMuted, fontWeight: '500' },
   buttonSubmit: {
     backgroundColor: COLORS.primary,
     borderRadius: 12,
@@ -283,7 +285,7 @@ export const modalStyles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 15,
   },
-  buttonSubmitText: { color: '#FFFFFF', fontSize: 15, fontWeight: 'bold' },
+  buttonSubmitText: { color: COLORS.white, fontSize: 15, fontWeight: 'bold' },
   buttonDelete: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -292,8 +294,8 @@ export const modalStyles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#FFCCD1',
-    backgroundColor: '#FFF5F5',
+    borderColor: COLORS.dangerBorder,
+    backgroundColor: COLORS.dangerSoft,
     marginTop: 10,
     marginBottom: 40,
   },

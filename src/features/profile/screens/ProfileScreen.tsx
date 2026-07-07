@@ -1,13 +1,13 @@
 ﻿import React, { useEffect, useState } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { useMemo } from 'react';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   View,
-  Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   Modal,
   ActivityIndicator,
-  Alert,
   Platform,
   RefreshControl,
 } from "react-native";
@@ -15,8 +15,14 @@ import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useProfileScreen } from '../hooks/useProfileScreen';
-import styles, { modalStyles } from './ProfileScreen.styles';
-import { COLORS } from '../../../theme/colors';
+import createStyles, { createModalStyles } from './ProfileScreen.styles';
+import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import {
+  LocalizedText as Text,
+  LocalizedTextInput as TextInput,
+} from '../../../i18n/LocalizedText';
+import { TranslatedContent } from '../../../i18n/TranslatedContent';
+import type { RootStackParamList } from '../../../navigation/types';
 
 type PrivacyDraft = {
   privacyDataNascita: boolean;
@@ -24,14 +30,25 @@ type PrivacyDraft = {
   privacyCitta: boolean;
 };
 
-const formattaDataMeseAnno = (date?: Date | string | null): string => {
+type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const formattaDataMeseAnno = (
+  date?: Date | string | null,
+  language: 'it' | 'en' = 'it'
+): string => {
   if (!date) return "";
   const d = date instanceof Date ? date : new Date(date);
-  const mesi = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
+  const mesi = language === 'it'
+    ? ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${mesi[d.getMonth()]} ${d.getFullYear()}`;
 };
 
 export default function ProfileScreen() {
+  const { colors: COLORS, language } = useAppPreferences();
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const modalStyles = useMemo(() => createModalStyles(COLORS), [COLORS]);
+  const navigation = useNavigation<RootNavigationProp>();
   const {
     profile,
     draftProfile,
@@ -137,12 +154,12 @@ export default function ProfileScreen() {
             <Ionicons
               name={editingProfile ? "checkmark-circle" : "create-outline"}
               size={24}
-              color={editingProfile ? "#2ECC71" : COLORS.secondary}
+              color={editingProfile ? COLORS.confirm : COLORS.secondary}
             />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerIcon}
-            onPress={() => Alert.alert("Impostazioni", "Configurazione della privacy disponibile a breve.")}
+            onPress={() => navigation.navigate('Settings')}
           >
             <Ionicons name="settings-outline" size={23} color={COLORS.secondary} />
           </TouchableOpacity>
@@ -171,7 +188,7 @@ export default function ProfileScreen() {
               )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.editAvatarButton} onPress={openPhotoMenu}>
-              <Ionicons name="camera" size={15} color="#FFFFFF" />
+              <Ionicons name="camera" size={15} color={COLORS.white} />
             </TouchableOpacity>
           </View>
 
@@ -179,7 +196,12 @@ export default function ProfileScreen() {
             <>
               <Text style={styles.profileName}>{profile?.nome}</Text>
               <Text style={styles.profileRuolo}>{profile?.ruolo} • {profile?.settore}</Text>
-              <Text style={styles.bioText}>{profile?.bio}</Text>
+              <TranslatedContent
+                contentId={`profile:${profile?.id ?? 'current'}:bio`}
+                sourceLanguage={profile?.bioLanguage ?? 'it'}
+                text={profile?.bio ?? ''}
+                style={styles.bioText}
+              />
             </>
           ) : (
             <View style={styles.editUserForm}>
@@ -237,7 +259,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name="settings-outline"
                 size={20}
-                color={privacyEditMode ? '#2ECC71' : COLORS.secondary}
+                color={privacyEditMode ? COLORS.confirm : COLORS.secondary}
               />
             </TouchableOpacity>
           </View>
@@ -256,7 +278,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name={privacyDraft.privacyDataNascita ? "eye" : "eye-off"}
                 size={18}
-                color={privacyDraft.privacyDataNascita ? "#2ECC71" : "#8A8A9A"}
+                color={privacyDraft.privacyDataNascita ? COLORS.confirm : COLORS.gray}
               />
             </TouchableOpacity>
           </View>
@@ -275,7 +297,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name={privacyDraft.privacyNazione ? "eye" : "eye-off"}
                 size={18}
-                color={privacyDraft.privacyNazione ? "#2ECC71" : "#8A8A9A"}
+                color={privacyDraft.privacyNazione ? COLORS.confirm : COLORS.gray}
               />
             </TouchableOpacity>
           </View>
@@ -294,7 +316,7 @@ export default function ProfileScreen() {
               <Ionicons
                 name={privacyDraft.privacyCitta ? "eye" : "eye-off"}
                 size={18}
-                color={privacyDraft.privacyCitta ? "#2ECC71" : "#8A8A9A"}
+                color={privacyDraft.privacyCitta ? COLORS.confirm : COLORS.gray}
               />
             </TouchableOpacity>
           </View>
@@ -332,10 +354,10 @@ export default function ProfileScreen() {
                   </View>
                   {editingProfile ? (
                     <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openProjectModal(item)}>
-                      <Ionicons name="pencil" size={15} color="#FFFFFF" />
+                      <Ionicons name="pencil" size={15} color={COLORS.white} />
                     </TouchableOpacity>
                   ) : (
-                    <Ionicons name="chevron-forward" size={18} color="#8A8A9A" />
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
                   )}
                 </View>
               ))
@@ -348,15 +370,15 @@ export default function ProfileScreen() {
                     <Text style={styles.itemTitle}>{item.titolo}</Text>
                     <Text style={styles.itemSubtitle}>{item.settore ? `${item.settore} • ${item.progetto}` : item.progetto}</Text>
                     <Text style={styles.dateDurationText}>
-                      📅 {formattaDataMeseAnno(item.inizio)} — {item.inCorso ? 'Oggi' : formattaDataMeseAnno(item.fine)}
+                      📅 {formattaDataMeseAnno(item.inizio, language)} — {item.inCorso ? (language === 'it' ? 'Oggi' : 'Today') : formattaDataMeseAnno(item.fine, language)}
                     </Text>
                   </View>
                   {editingProfile ? (
                     <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openExperienceModal(item)}>
-                      <Ionicons name="pencil" size={15} color="#FFFFFF" />
+                      <Ionicons name="pencil" size={15} color={COLORS.white} />
                     </TouchableOpacity>
                   ) : (
-                    <Ionicons name="chevron-forward" size={18} color="#8A8A9A" />
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
                   )}
                 </View>
               ))}
@@ -482,7 +504,7 @@ export default function ProfileScreen() {
                 value={selectedProject.citta}
                 onChangeText={(text) => updateSelectedProjectValue('citta', text)}
               />
-              <TouchableOpacity style={[modalStyles.buttonSubmit, { backgroundColor: '#2ECC71' }]} onPress={saveProject}>
+              <TouchableOpacity style={[modalStyles.buttonSubmit, { backgroundColor: COLORS.confirm }]} onPress={saveProject}>
                 <Text style={modalStyles.buttonSubmitText}>Salva Modifiche</Text>
               </TouchableOpacity>
               <TouchableOpacity style={modalStyles.buttonDelete} onPress={removeProject}>
@@ -558,8 +580,8 @@ export default function ProfileScreen() {
                 }}
               >
                 <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
-                <Text style={modalStyles.dateText}>{formattaDataMeseAnno(selectedExperience.inizio)}</Text>
-                <Ionicons name={showInizioPicker ? "chevron-up" : "chevron-down"} size={16} color="#8A8A9A" style={{ marginLeft: 'auto' }} />
+                <Text style={modalStyles.dateText}>{formattaDataMeseAnno(selectedExperience.inizio, language)}</Text>
+                <Ionicons name={showInizioPicker ? "chevron-up" : "chevron-down"} size={16} color={COLORS.gray} style={{ marginLeft: 'auto' }} />
               </TouchableOpacity>
               {showInizioPicker && (
                 <View style={modalStyles.iosPickerWrapper}>
@@ -567,7 +589,8 @@ export default function ProfileScreen() {
                     value={selectedExperience.inizio ? new Date(selectedExperience.inizio) : new Date()}
                     mode="date"
                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    textColor="#FFFFFF"
+                    locale={language === 'it' ? 'it-IT' : 'en-US'}
+                    textColor={COLORS.white}
                     maximumDate={new Date()}
                     onChange={(_event: DateTimePickerEvent, date?: Date) => {
                       if (date) updateSelectedExperienceValue('inizio', date);
@@ -587,8 +610,8 @@ export default function ProfileScreen() {
                     }}
                   >
                     <Ionicons name="calendar-outline" size={18} color={COLORS.primary} />
-                    <Text style={modalStyles.dateText}>{formattaDataMeseAnno(selectedExperience.fine)}</Text>
-                    <Ionicons name={showFinePicker ? "chevron-up" : "chevron-down"} size={16} color="#8A8A9A" style={{ marginLeft: 'auto' }} />
+                    <Text style={modalStyles.dateText}>{formattaDataMeseAnno(selectedExperience.fine, language)}</Text>
+                    <Ionicons name={showFinePicker ? "chevron-up" : "chevron-down"} size={16} color={COLORS.gray} style={{ marginLeft: 'auto' }} />
                   </TouchableOpacity>
                   {showFinePicker && (
                     <View style={modalStyles.iosPickerWrapper}>
@@ -596,7 +619,8 @@ export default function ProfileScreen() {
                         value={selectedExperience.fine ? new Date(selectedExperience.fine) : new Date()}
                         mode="date"
                         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        textColor="#FFFFFF"
+                        locale={language === 'it' ? 'it-IT' : 'en-US'}
+                        textColor={COLORS.white}
                         maximumDate={new Date()}
                         onChange={(_event: DateTimePickerEvent, date?: Date) => {
                           if (date) updateSelectedExperienceValue('fine', date);
@@ -607,7 +631,7 @@ export default function ProfileScreen() {
                 </>
               )}
 
-              <TouchableOpacity style={[modalStyles.buttonSubmit, { backgroundColor: '#2ECC71', marginTop: 25 }]} onPress={saveExperience}>
+              <TouchableOpacity style={[modalStyles.buttonSubmit, { backgroundColor: COLORS.confirm, marginTop: 25 }]} onPress={saveExperience}>
                 <Text style={modalStyles.buttonSubmitText}>Salva Modifiche</Text>
               </TouchableOpacity>
               <TouchableOpacity style={modalStyles.buttonDelete} onPress={removeExperience}>

@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
@@ -10,9 +9,13 @@ import {
 import { fetchProjects } from "../services/projectService";
 import ProjectCard from "../components/ProjectCard";
 import type { ProjectCardPost } from "../components/ProjectCard";
-import { COLORS } from '../../../theme/colors'; // Importa dal percorso corretto
+import type { ColorPalette } from '../../../theme/colors';
+import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
+import { LocalizedText as Text } from '../../../i18n/LocalizedText';
 
 export default function HomeScreen() {
+  const { colors } = useAppPreferences();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [posts, setPosts] = useState<ProjectCardPost[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -42,7 +45,7 @@ export default function HomeScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <ScrollView
@@ -52,8 +55,8 @@ export default function HomeScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={refreshData}
-              colors={[COLORS.primary]}
-              tintColor={COLORS.primary}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
             />
           }
         >
@@ -67,30 +70,30 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+const createStyles = (colors: ColorPalette) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 55,
     paddingBottom: 15,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   avatarSmall: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
   },
   logoText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: COLORS.primary,
+    color: colors.primary,
     letterSpacing: 1,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -99,11 +102,11 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
-  matchText: { fontSize: 16, fontWeight: "bold", color: COLORS.primary },
+  matchText: { fontSize: 16, fontWeight: "bold", color: colors.primary },
   iconButton: {
     width: 36,
     height: 36,
@@ -115,7 +118,7 @@ const styles = StyleSheet.create({
   feedTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: COLORS.secondary,
+    color: colors.secondary,
     marginBottom: 4,
   },
 });
