@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   RefreshControl,
+  Image,
 } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -89,6 +90,7 @@ export default function ProfileScreen() {
     closeProjectModal,
     saveProject,
     removeProject,
+    pickSelectedProjectImage,
     openExperienceModal,
     closeExperienceModal,
     createNewExperience,
@@ -96,6 +98,7 @@ export default function ProfileScreen() {
     removeExperience,
     updateSelectedExperienceValue,
     updateSelectedProjectValue,
+    updateSelectedProjectOpenRoles,
     setActiveTab,
     setShowInizioPicker,
     setShowFinePicker,
@@ -110,6 +113,21 @@ export default function ProfileScreen() {
 
   const openCreateMenu = () => setCreateMenuVisible(true);
   const closeCreateMenu = () => setCreateMenuVisible(false);
+
+  const openProjectPage = (projectId?: string) => {
+    if (projectId) navigation.navigate('ProjectDetail', { projectId });
+  };
+
+  const handleCreateProject = async () => {
+    const savedProject = await saveProject();
+    if (savedProject?.id) {
+      navigation.navigate('ProjectDetail', { projectId: savedProject.id });
+    }
+  };
+
+  const handleSaveProject = async () => {
+    await saveProject();
+  };
 
   useEffect(() => {
     if (profile) {
@@ -204,6 +222,12 @@ export default function ProfileScreen() {
             <>
               <Text style={styles.profileName}>{profile?.nome}</Text>
               <Text style={styles.profileRuolo}>{profile?.ruolo} • {profile?.settore}</Text>
+              {profile?.isBuilder && (
+                <View style={styles.builderBadge}>
+                  <Ionicons name="construct-outline" size={14} color={COLORS.primary} />
+                  <Text style={styles.builderBadgeText}>Builder</Text>
+                </View>
+              )}
               <TranslatedContent
                 contentId={`profile:${profile?.id ?? 'current'}:bio`}
                 sourceLanguage={profile?.bioLanguage ?? 'it'}
@@ -336,7 +360,7 @@ export default function ProfileScreen() {
             onPress={() => setActiveTab('projects')}
           >
             <Text style={[styles.tabText, activeTab === "projects" && styles.tabTextActive]}>
-              Pagine Progetto ({projects.length})
+              Progetti ({projects.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -352,13 +376,28 @@ export default function ProfileScreen() {
         <View style={styles.tabContent}>
           {activeTab === 'projects'
             ? projects.map((item) => (
-                <View key={item.id} style={styles.itemCard}>
+                <TouchableOpacity
+                  key={item.id}
+                  activeOpacity={0.78}
+                  disabled={editingProfile}
+                  style={styles.itemCard}
+                  onPress={() => openProjectPage(item.id)}
+                >
                   <View style={styles.itemIcon}>
-                    <FontAwesome5 name="project-diagram" size={16} color={COLORS.primary} />
+                    {item.foto ? (
+                      <Image source={{ uri: item.foto }} style={styles.itemImage} />
+                    ) : (
+                      <FontAwesome5 name="project-diagram" size={16} color={COLORS.primary} />
+                    )}
                   </View>
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemTitle}>{item.nome}</Text>
                     <Text style={styles.itemSubtitle}>{item.settore} • {item.citta}</Text>
+                    <Text numberOfLines={1} style={styles.dateDurationText}>
+                      {item.openRoles.length > 0
+                        ? item.openRoles.join(', ')
+                        : 'Progetto creato da te'}
+                    </Text>
                   </View>
                   {editingProfile ? (
                     <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openProjectModal(item)}>
@@ -367,7 +406,7 @@ export default function ProfileScreen() {
                   ) : (
                     <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
                   )}
-                </View>
+                </TouchableOpacity>
               ))
             : experiences.map((item) => (
                 <View key={item.id} style={styles.itemCard}>
@@ -397,10 +436,10 @@ export default function ProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.actionSheetContainer}>
             <Text style={styles.actionSheetTitle}>Aggiungi contenuto</Text>
-            <Text style={styles.actionSheetDescription}>Scegli se creare una nuova pagina progetto o una nuova esperienza professionale.</Text>
+            <Text style={styles.actionSheetDescription}>Scegli se creare un nuovo progetto o una nuova esperienza professionale.</Text>
             <TouchableOpacity style={styles.actionSheetBtn} onPress={() => { closeCreateMenu(); openCreateProjectModal(); }}>
               <Ionicons name="brush-outline" size={20} color={COLORS.primary} />
-              <Text style={styles.actionSheetBtnText}>Nuova pagina progetto</Text>
+              <Text style={styles.actionSheetBtnText}>Nuovo progetto</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionSheetBtn} onPress={() => { closeCreateMenu(); createNewExperience(); }}>
               <Ionicons name="briefcase-outline" size={20} color={COLORS.primary} />
@@ -444,7 +483,7 @@ export default function ProfileScreen() {
             <TouchableOpacity onPress={closeCreateProjectModal}>
               <Ionicons name="close" size={24} color={COLORS.secondary} />
             </TouchableOpacity>
-            <Text style={modalStyles.headerTitle}>Nuova Pagina Progetto</Text>
+            <Text style={modalStyles.headerTitle}>Nuovo Progetto</Text>
             <View style={{ width: 24 }} />
           </View>
           <ScrollView contentContainerStyle={modalStyles.scroll}>
@@ -462,12 +501,48 @@ export default function ProfileScreen() {
               value={selectedProject?.settore}
               onChangeText={(text) => updateSelectedProjectValue('settore', text)}
             />
+            <Text style={modalStyles.label}>Stato *</Text>
+            <TextInput
+              style={modalStyles.input}
+              placeholder="Italia"
+              value={selectedProject?.stato}
+              onChangeText={(text) => updateSelectedProjectValue('stato', text)}
+            />
             <Text style={modalStyles.label}>Città di Riferimento *</Text>
             <TextInput
               style={modalStyles.input}
               placeholder="Città"
               value={selectedProject?.citta}
               onChangeText={(text) => updateSelectedProjectValue('citta', text)}
+            />
+            <Text style={modalStyles.label}>Immagine progetto</Text>
+            <TouchableOpacity
+              style={modalStyles.projectImagePicker}
+              onPress={pickSelectedProjectImage}
+            >
+              {selectedProject?.foto ? (
+                <Image source={{ uri: selectedProject.foto }} style={modalStyles.projectImage} />
+              ) : (
+                <>
+                  <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+                  <Text style={modalStyles.projectImageText}>Scegli immagine</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <Text style={modalStyles.label}>Descrizione *</Text>
+            <TextInput
+              style={[modalStyles.input, { minHeight: 92, textAlignVertical: 'top' }]}
+              multiline
+              placeholder="Racconta cosa state costruendo"
+              value={selectedProject?.descrizione}
+              onChangeText={(text) => updateSelectedProjectValue('descrizione', text)}
+            />
+            <Text style={modalStyles.label}>Ruoli aperti</Text>
+            <TextInput
+              style={modalStyles.input}
+              placeholder="Es. Mobile developer, Designer"
+              value={selectedProject?.openRoles.join(', ')}
+              onChangeText={updateSelectedProjectOpenRoles}
             />
             <Text style={modalStyles.label}>Collaboratori</Text>
             <TextInput
@@ -476,8 +551,8 @@ export default function ProfileScreen() {
               value={selectedProject?.collaboratori}
               onChangeText={(text) => updateSelectedProjectValue('collaboratori', text)}
             />
-            <TouchableOpacity style={modalStyles.buttonSubmit} onPress={saveProject}>
-              <Text style={modalStyles.buttonSubmitText}>Crea ed Entra nella Pagina</Text>
+            <TouchableOpacity style={modalStyles.buttonSubmit} onPress={handleCreateProject}>
+              <Text style={modalStyles.buttonSubmitText}>Crea e apri progetto</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -506,13 +581,46 @@ export default function ProfileScreen() {
                 value={selectedProject.settore}
                 onChangeText={(text) => updateSelectedProjectValue('settore', text)}
               />
+              <Text style={modalStyles.label}>Stato</Text>
+              <TextInput
+                style={modalStyles.input}
+                value={selectedProject.stato}
+                onChangeText={(text) => updateSelectedProjectValue('stato', text)}
+              />
               <Text style={modalStyles.label}>Città</Text>
               <TextInput
                 style={modalStyles.input}
                 value={selectedProject.citta}
                 onChangeText={(text) => updateSelectedProjectValue('citta', text)}
               />
-              <TouchableOpacity style={[modalStyles.buttonSubmit, { backgroundColor: COLORS.confirm }]} onPress={saveProject}>
+              <Text style={modalStyles.label}>Immagine progetto</Text>
+              <TouchableOpacity
+                style={modalStyles.projectImagePicker}
+                onPress={pickSelectedProjectImage}
+              >
+                {selectedProject.foto ? (
+                  <Image source={{ uri: selectedProject.foto }} style={modalStyles.projectImage} />
+                ) : (
+                  <>
+                    <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+                    <Text style={modalStyles.projectImageText}>Scegli immagine</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <Text style={modalStyles.label}>Descrizione</Text>
+              <TextInput
+                style={[modalStyles.input, { minHeight: 92, textAlignVertical: 'top' }]}
+                multiline
+                value={selectedProject.descrizione}
+                onChangeText={(text) => updateSelectedProjectValue('descrizione', text)}
+              />
+              <Text style={modalStyles.label}>Ruoli aperti</Text>
+              <TextInput
+                style={modalStyles.input}
+                value={selectedProject.openRoles.join(', ')}
+                onChangeText={updateSelectedProjectOpenRoles}
+              />
+              <TouchableOpacity style={[modalStyles.buttonSubmit, { backgroundColor: COLORS.confirm }]} onPress={handleSaveProject}>
                 <Text style={modalStyles.buttonSubmitText}>Salva Modifiche</Text>
               </TouchableOpacity>
               <TouchableOpacity style={modalStyles.buttonDelete} onPress={removeProject}>
@@ -547,10 +655,10 @@ export default function ProfileScreen() {
                 value={selectedExperience.settore}
                 onChangeText={(text) => updateSelectedExperienceValue('settore', text)}
               />
-              <Text style={modalStyles.label}>Pagina progetto di riferimento *</Text>
+              <Text style={modalStyles.label}>Progetto di riferimento *</Text>
               <TextInput
                 style={modalStyles.input}
-                placeholder="Nome pagina progetto"
+                placeholder="Nome progetto"
                 value={selectedExperience.paginaProgetto}
                 onChangeText={(text) => updateSelectedExperienceValue('paginaProgetto', text)}
               />

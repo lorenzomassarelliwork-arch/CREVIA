@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { RegisterForm } from '../features/auth/validators/authValidator';
 import type { SearchPresetKey } from '../features/search/services/searchService';
 
 export type SettingsCategoryKey =
@@ -25,14 +26,16 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Login: undefined;
   Register: { terminiAccettati?: boolean } | undefined;
+  BuilderProfileSetup: { registration: RegisterForm };
   ForgotPassword: undefined;
   TerminiCondizioni: { mode?: 'registration' | 'view' } | undefined;
   Main: NavigatorScreenParams<MainTabParamList> | undefined;
   Conversation: { conversationId: string };
   GroupInfo: { conversationId: string };
   ContactInfo: { conversationId: string };
-  PublicUserProfile: { userId: string };
+  PublicUserProfile: { userId: string; connectionRequestId?: string };
   ProjectDetail: { projectId: string };
+  Notifications: undefined;
   Settings: undefined;
   SettingsCategory: { category: SettingsCategoryKey };
   SecuritySettings: { action: SecuritySettingsAction };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
   addExperience,
   addProject,
@@ -40,14 +41,20 @@ const INITIAL_PROFILE: Profile = {
   privacyDataNascita: false,
   privacyNazione: false,
   privacyCitta: false,
+  isBuilder: false,
+  builderProfileCompleted: false,
 };
 
 const INITIAL_PROJECT: Project = {
   nome: '',
   settore: '',
+  stato: 'Italia',
   citta: '',
+  descrizione: '',
   ruoloUtente: '',
   collaboratori: '',
+  foto: null,
+  openRoles: [],
 };
 
 const INITIAL_EXPERIENCE: Experience = {
@@ -182,9 +189,13 @@ export function useProfileScreen() {
   }, [profile]);
 
   const openCreateProjectModal = useCallback(() => {
-    setSelectedProject({ ...INITIAL_PROJECT });
+    setSelectedProject({
+      ...INITIAL_PROJECT,
+      ruoloUtente: 'Founder',
+      collaboratori: profile?.nome ? `${profile.nome} (Creatore)` : '',
+    });
     setIsCreateProjectModalVisible(true);
-  }, []);
+  }, [profile?.nome]);
 
   const closeCreateProjectModal = useCallback(() => {
     setSelectedProject(null);
@@ -202,7 +213,21 @@ export function useProfileScreen() {
   }, []);
 
   const saveProject = useCallback(async () => {
-    if (!selectedProject) return;
+    if (!selectedProject) return null;
+
+    if (
+      !selectedProject.nome.trim() ||
+      !selectedProject.settore.trim() ||
+      !selectedProject.citta.trim() ||
+      !selectedProject.descrizione.trim()
+    ) {
+      Alert.alert(
+        'Dati progetto mancanti',
+        'Inserisci nome, settore, citta e descrizione prima di creare la pagina.'
+      );
+      return null;
+    }
+
     setLoading(true);
 
     const response = selectedProject.id
@@ -221,6 +246,7 @@ export function useProfileScreen() {
     }
 
     setLoading(false);
+    return response.data ?? null;
   }, [selectedProject, closeCreateProjectModal, closeProjectModal]);
 
   const removeProject = useCallback(() => {
@@ -228,8 +254,8 @@ export function useProfileScreen() {
     const projectId = selectedProject.id;
 
     Alert.alert(
-      translateUi('Elimina Pagina Progetto', language),
-      translateUi('Sei sicuro di voler eliminare definitivamente questa pagina progetto?', language),
+      translateUi('Elimina Progetto', language),
+      translateUi('Sei sicuro di voler eliminare definitivamente questo progetto?', language),
       [
         { text: translateUi('Annulla', language), style: 'cancel' },
         {
@@ -325,6 +351,45 @@ export function useProfileScreen() {
     setSelectedProject((current) => current ? ({ ...current, [key]: value }) : current);
   }, []);
 
+  const updateSelectedProjectOpenRoles = useCallback((value: string) => {
+    setSelectedProject((current) =>
+      current
+        ? {
+            ...current,
+            openRoles: value
+              .split(',')
+              .map((role) => role.trim())
+              .filter(Boolean),
+          }
+        : current
+    );
+  }, []);
+
+  const pickSelectedProjectImage = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permesso richiesto',
+        'Consenti a Crevia di accedere alle foto per aggiungere un immagine al progetto.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) {
+      setSelectedProject((current) =>
+        current ? { ...current, foto: result.assets[0]?.uri ?? null } : current
+      );
+    }
+  }, []);
+
   const formattedExperiences = useMemo<FormattedExperience[]>(
     () =>
       experiences.map((item) => ({
@@ -364,6 +429,7 @@ export function useProfileScreen() {
     closeProjectModal,
     saveProject,
     removeProject,
+    pickSelectedProjectImage,
     openExperienceModal,
     closeExperienceModal,
     createNewExperience,
@@ -371,6 +437,7 @@ export function useProfileScreen() {
     removeExperience,
     updateSelectedExperienceValue,
     updateSelectedProjectValue,
+    updateSelectedProjectOpenRoles,
     setActiveTab,
     setShowInizioPicker,
     setShowFinePicker,

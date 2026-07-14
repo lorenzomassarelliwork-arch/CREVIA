@@ -14,9 +14,11 @@ import {
 import BottomNavBar from './src/navigation/BottomNavBar';
 import LoginScreen from './src/features/auth/screens/LoginScreen';
 import RegisterScreen from './src/features/auth/screens/RegisterScreen';
+import BuilderProfileSetupScreen from './src/features/auth/screens/BuilderProfileSetupScreen';
 import HomeScreen from './src/features/projects/screens/HomeScreen';
 import SearchScreen from './src/features/projects/screens/SearchScreen';
 import ProjectDetailScreen from './src/features/projects/screens/ProjectDetailScreen';
+import NotificationsScreen from './src/features/notifications/screens/NotificationsScreen';
 import ChatsScreen from './src/features/chat/screens/ChatsScreen';
 import ConversationScreen from './src/features/chat/screens/ConversationScreen';
 import GroupInfoScreen from './src/features/chat/screens/GroupInfoScreen';
@@ -89,6 +91,7 @@ function AppNavigator() {
         >
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="BuilderProfileSetup" component={BuilderProfileSetupScreen} />
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="TerminiCondizioni" component={TerminiCondizioniScreen} />
           <Stack.Screen
@@ -101,6 +104,7 @@ function AppNavigator() {
           <Stack.Screen name="ContactInfo" component={ContactInfoScreen} />
           <Stack.Screen name="PublicUserProfile" component={PublicUserProfileScreen} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="SettingsCategory" component={SettingsCategoryScreen} />
           <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />

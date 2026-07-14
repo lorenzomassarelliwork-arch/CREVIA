@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import type { ColorPalette } from '../../../theme/colors';
+import { LIGHT_COLORS, type ColorPalette } from '../../../theme/colors';
 
 export default function createStyles(
   COLORS: ColorPalette,
@@ -58,6 +58,17 @@ export default function createStyles(
   },
   profileName: { fontSize: 20, fontWeight: 'bold', color: COLORS.secondary },
   profileRuolo: { fontSize: 13, color: COLORS.primary, fontWeight: '600', marginTop: 4 },
+  builderBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: COLORS.primarySoft,
+    marginTop: 10,
+  },
+  builderBadgeText: { fontSize: 12, color: COLORS.primary, fontWeight: '800' },
   bioText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginTop: 10 },
   statsContainer: {
     flexDirection: 'row',
@@ -153,7 +164,7 @@ export default function createStyles(
   tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 9 },
   tabButtonActive: { backgroundColor: COLORS.white },
   tabText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
-  tabTextActive: { color: COLORS.secondary },
+  tabTextActive: { color: LIGHT_COLORS.textStrong },
   tabContent: { gap: 12 },
   itemCard: {
     backgroundColor: COLORS.cardBackground,
@@ -170,7 +181,9 @@ export default function createStyles(
     backgroundColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
+  itemImage: { width: '100%', height: '100%' },
   itemInfo: { flex: 1 },
   itemTitle: { fontSize: 14, fontWeight: 'bold', color: COLORS.secondary },
   itemSubtitle: { fontSize: 12, color: COLORS.primary },
@@ -272,6 +285,19 @@ export const createModalStyles = (
     borderRadius: 12,
     padding: 14,
   },
+  projectImagePicker: {
+    minHeight: 132,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.actionSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    overflow: 'hidden',
+  },
+  projectImage: { width: '100%', height: 132 },
+  projectImageText: { color: COLORS.primary, fontSize: 13, fontWeight: '700' },
   dateText: { fontSize: 15, color: COLORS.secondary, fontWeight: '500' },
   iosPickerWrapper: {
     backgroundColor: COLORS.secondary,

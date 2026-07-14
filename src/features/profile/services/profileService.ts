@@ -1,3 +1,9 @@
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
+import {
+  createOwnedProjectDetail,
+  deleteProjectDetail,
+  updateProjectDetailFromProfileProject,
+} from '../../projects/services/projectDetailService';
 import type { AppLanguage } from '../../../theme/AppPreferencesProvider';
 
 export type Profile = {
@@ -16,16 +22,21 @@ export type Profile = {
   privacyDataNascita: boolean;
   privacyNazione: boolean;
   privacyCitta: boolean;
+  isBuilder: boolean;
+  builderProfileCompleted: boolean;
 };
 
 export type Project = {
   id?: string;
   nome: string;
   settore: string;
+  stato: string;
   citta: string;
+  descrizione: string;
   ruoloUtente: string;
   collaboratori: string;
   foto?: string | null;
+  openRoles: string[];
 };
 
 export type Experience = {
@@ -56,7 +67,7 @@ const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 let fakeProfile: Profile = {
-  id: '1',
+  id: CURRENT_USER_ID,
   nome: 'Luca Rossi',
   ruolo: 'Founder',
   settore: 'Prodotti Digitali',
@@ -71,26 +82,23 @@ let fakeProfile: Profile = {
   privacyDataNascita: true,
   privacyNazione: false,
   privacyCitta: true,
+  isBuilder: true,
+  builderProfileCompleted: true,
 };
 
 let fakeProjects: Project[] = [
   {
-    id: 'proj_1',
-    nome: 'Crevia App',
-    settore: 'UX Design',
+    id: '4',
+    nome: 'FinLab',
+    settore: 'Fintech',
+    stato: 'Italia',
     citta: 'Milano',
+    descrizione:
+      'Laboratorio fintech per sperimentare prodotti su pagamenti digitali, educazione finanziaria e data analysis.',
     ruoloUtente: 'Founder',
     collaboratori: 'Luca Rossi (Creatore)',
     foto: null,
-  },
-  {
-    id: 'proj_2',
-    nome: 'Portfolio Digitale',
-    settore: 'Personal Branding',
-    citta: 'Roma',
-    ruoloUtente: 'Founder',
-    collaboratori: 'Luca Rossi (Creatore)',
-    foto: null,
+    openRoles: ['Data analyst', 'Backend developer', 'Product manager'],
   },
 ];
 
@@ -135,6 +143,24 @@ export async function updateProfile(
   return { data: { ...fakeProfile }, error: null };
 }
 
+export async function completeBuilderProfile(
+  profile: Pick<
+    Profile,
+    'nome' | 'ruolo' | 'settore' | 'bio' | 'dataNascita' | 'nazione' | 'citta'
+  >
+): Promise<ServiceResult<Profile>> {
+  await delay(300);
+  fakeProfile = {
+    ...fakeProfile,
+    ...profile,
+    id: fakeProfile.id ?? CURRENT_USER_ID,
+    isBuilder: true,
+    builderProfileCompleted: true,
+  };
+
+  return { data: { ...fakeProfile }, error: null };
+}
+
 export async function getAppPreferences(): Promise<ServiceResult<AppPreferences>> {
   await delay(250);
   return { data: { ...fakeAppPreferences }, error: null };
@@ -159,6 +185,7 @@ export async function addProject(
   await delay(300);
   const newProject = { ...project, id: `proj_${Date.now()}` };
   fakeProjects = [...fakeProjects, newProject];
+  createOwnedProjectDetail(newProject, fakeProfile);
   return { data: newProject, error: null };
 }
 
@@ -167,6 +194,7 @@ export async function updateProject(
 ): Promise<ServiceResult<Project>> {
   await delay(300);
   fakeProjects = fakeProjects.map((item) => (item.id === project.id ? { ...item, ...project } : item));
+  updateProjectDetailFromProfileProject(project, fakeProfile);
   return { data: project, error: null };
 }
 
@@ -175,6 +203,7 @@ export async function deleteProject(
 ): Promise<ServiceResult<null>> {
   await delay(250);
   fakeProjects = fakeProjects.filter((item) => item.id !== projectId);
+  deleteProjectDetail(projectId);
   return { data: null, error: null };
 }
 

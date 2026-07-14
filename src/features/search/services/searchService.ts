@@ -88,15 +88,42 @@ export async function searchDirectory(
   query: string,
   filters: SearchFilters
 ): Promise<SearchServiceResult<SearchResult[]>> {
-  const { mockSearchResults } = await import('../mocks/searchMockData');
+  const { mockProjectDetails } = await import('../../projects/mocks/projectMockData');
+  const { mockPublicUsers } = await import('../../users/mocks/userMockData');
   await wait();
+
+  const searchResults: SearchResult[] = [
+    ...mockPublicUsers.map((user) => ({
+      id: user.id,
+      type: 'user' as const,
+      title: user.displayName,
+      subtitle: `${user.ruolo} - ${user.citta}`,
+      mansione: user.mansione,
+      settore: user.settore,
+      stato: user.stato,
+      citta: user.citta,
+      isOnline: user.isOnline,
+    })),
+    ...mockProjectDetails.map((project) => ({
+      id: project.id,
+      type: 'project' as const,
+      title: project.nome,
+      subtitle: `${project.settore} - ${project.citta}`,
+      mansione: null,
+      settore: project.settore,
+      stato: project.stato,
+      citta: project.citta,
+      builders: project.builderCount,
+      openRoles: project.openRoles,
+    })),
+  ];
 
   const normalizedQuery = normalize(query);
   const normalizedSettore = normalize(filters.settore);
   const normalizedStato = normalize(filters.stato);
   const normalizedCitta = normalize(filters.citta);
 
-  const data = mockSearchResults.filter((item) => {
+  const data = searchResults.filter((item) => {
     const searchableText = normalize(
       `${item.title} ${item.subtitle} ${item.settore} ${item.stato} ${item.citta} ${item.mansione ?? ''}`
     );

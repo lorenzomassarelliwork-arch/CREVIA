@@ -21,6 +21,7 @@ import {
   reportPublicUser,
   setBuilderConnection,
 } from '../services/userService';
+import { respondToConnectionRequest } from '../../notifications/services/notificationService';
 import type { PublicUserProfile } from '../services/userService';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
@@ -57,6 +58,9 @@ export default function PublicUserProfileScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [connectionRequestVisible, setConnectionRequestVisible] = useState(
+    Boolean(route.params.connectionRequestId)
+  );
 
   const loadProfile = useCallback(
     async (refresh = false) => {
@@ -101,6 +105,53 @@ export default function PublicUserProfileScreen({
     const response = await setBuilderConnection(profile.id, !profile.isBuilder);
     if (response.data) setProfile(response.data);
     setActionLoading(null);
+  };
+
+  const acceptConnectionRequest = async () => {
+    if (!profile || !route.params.connectionRequestId) return;
+
+    void triggerHaptic();
+    setActionLoading('acceptConnection');
+    try {
+      const [connectionResponse] = await Promise.all([
+        setBuilderConnection(profile.id, true),
+        respondToConnectionRequest(route.params.connectionRequestId, 'accepted'),
+      ]);
+      if (connectionResponse.data) setProfile(connectionResponse.data);
+      setConnectionRequestVisible(false);
+    } catch (requestError) {
+      Alert.alert(
+        'Azione non riuscita',
+        requestError instanceof Error
+          ? requestError.message
+          : 'Non e stato possibile accettare la richiesta.'
+      );
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const declineConnectionRequest = async () => {
+    if (!route.params.connectionRequestId) return;
+
+    void triggerHaptic();
+    setActionLoading('declineConnection');
+    try {
+      await respondToConnectionRequest(
+        route.params.connectionRequestId,
+        'declined'
+      );
+      setConnectionRequestVisible(false);
+    } catch (requestError) {
+      Alert.alert(
+        'Azione non riuscita',
+        requestError instanceof Error
+          ? requestError.message
+          : 'Non e stato possibile rifiutare la richiesta.'
+      );
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const startConversation = async () => {
@@ -177,6 +228,46 @@ export default function PublicUserProfileScreen({
         }
         showsVerticalScrollIndicator={false}
       >
+        {connectionRequestVisible && !profile.isBuilder && (
+          <View style={styles.connectionRequestBanner}>
+            <View style={styles.connectionRequestIcon}>
+              <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.connectionRequestCopy}>
+              <Text style={styles.connectionRequestTitle}>
+                Richiesta di collegamento
+              </Text>
+              <Text style={styles.connectionRequestText}>
+                {profile.displayName} vuole collegarsi con te su Crevia.
+              </Text>
+            </View>
+            <View style={styles.connectionRequestActions}>
+              <TouchableOpacity
+                disabled={actionLoading !== null}
+                style={styles.bannerSecondaryButton}
+                onPress={declineConnectionRequest}
+              >
+                {actionLoading === 'declineConnection' ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons name="close" size={20} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                disabled={actionLoading !== null}
+                style={styles.bannerPrimaryButton}
+                onPress={acceptConnectionRequest}
+              >
+                {actionLoading === 'acceptConnection' ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="checkmark" size={20} color={colors.white} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
             {profile.avatarUrl ? (
@@ -355,6 +446,59 @@ const createStyles = (
       shadowOpacity: 0.08,
       shadowRadius: 8,
       elevation: 3,
+    },
+    connectionRequestBanner: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    connectionRequestIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    connectionRequestCopy: { flex: 1, gap: 3 },
+    connectionRequestTitle: {
+      fontSize: 14,
+      fontWeight: 'bold',
+      color: colors.secondary,
+    },
+    connectionRequestText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
+    },
+    connectionRequestActions: { flexDirection: 'row', gap: 8 },
+    bannerSecondaryButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 8,
+      backgroundColor: colors.actionSurface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    bannerPrimaryButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     avatarWrap: { position: 'relative' },
     avatar: { width: 82, height: 82, borderRadius: 24 },

@@ -40,8 +40,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Consenti a Crevia di accedere alle foto che vuoi condividere in chat.",
-          "cameraPermission": "Consenti a Crevia di usare la fotocamera per scattare foto da condividere in chat.",
+          "photosPermission": "Consenti a Crevia di accedere alle foto che vuoi usare per profilo, progetti e chat.",
+          "cameraPermission": "Consenti a Crevia di usare la fotocamera per profilo, progetti e chat.",
           "microphonePermission": false
         }
       ],

@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,6 +23,12 @@ import {
   setProjectFollowing,
 } from '../services/projectDetailService';
 import type { ProjectDetail } from '../services/projectDetailService';
+import {
+  createProjectPost,
+  listProjectPosts,
+  type ProjectPost,
+  type ProjectPostKind,
+} from '../services/projectPostService';
 import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
@@ -29,6 +38,34 @@ type ProjectDetailScreenProps = NativeStackScreenProps<
   RootStackParamList,
   'ProjectDetail'
 >;
+
+const postKindOptions: { value: ProjectPostKind; label: string }[] = [
+  { value: 'update', label: 'Update' },
+  { value: 'milestone', label: 'Milestone' },
+  { value: 'hiring', label: 'Ruolo aperto' },
+];
+
+const postKindLabels: Record<ProjectPostKind, string> = {
+  update: 'Update',
+  milestone: 'Milestone',
+  hiring: 'Ruolo aperto',
+};
+
+const getInitials = (name: string) =>
+  name
+    .split(' ')
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase();
+
+const formatPostDate = (date: string) =>
+  new Intl.DateTimeFormat('it-IT', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date));
 
 export default function ProjectDetailScreen({
   navigation,
@@ -45,15 +82,25 @@ export default function ProjectDetailScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [posts, setPosts] = useState<ProjectPost[]>([]);
+  const [postBody, setPostBody] = useState('');
+  const [postImageUri, setPostImageUri] = useState<string | null>(null);
+  const [postKind, setPostKind] = useState<ProjectPostKind>('update');
+  const [postLoading, setPostLoading] = useState(false);
 
   const loadProject = useCallback(
     async (refresh = false) => {
       refresh ? setRefreshing(true) : setLoading(true);
       setError(null);
 
-      const response = await getProjectDetail(route.params.projectId);
-      setProject(response.data);
-      setError(response.error);
+      const [projectResponse, postsResponse] = await Promise.all([
+        getProjectDetail(route.params.projectId),
+        listProjectPosts(route.params.projectId),
+      ]);
+
+      setProject(projectResponse.data);
+      setPosts(postsResponse.data);
+      setError(projectResponse.error ?? postsResponse.error);
       setLoading(false);
       setRefreshing(false);
     },
@@ -147,6 +194,57 @@ export default function ProjectDetailScreen({
     );
   };
 
+  const pickPostImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      Alert.alert(
+        'Permesso richiesto',
+        'Consenti a Crevia di accedere alle foto per allegare immagini ai post.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) {
+      setPostImageUri(result.assets[0]?.uri ?? null);
+    }
+  };
+
+  const publishPost = async () => {
+    if (!project || !isManager) return;
+
+    void triggerHaptic();
+    setPostLoading(true);
+
+    const response = await createProjectPost({
+      projectId: project.id,
+      authorId: CURRENT_USER_ID,
+      authorName: project.founderName,
+      kind: postKind,
+      body: postBody,
+      imageUri: postImageUri,
+    });
+
+    setPostLoading(false);
+
+    if (response.error || !response.data) {
+      Alert.alert('Post non pubblicato', response.error ?? 'Riprova tra poco.');
+      return;
+    }
+
+    setPosts((current) => [response.data as ProjectPost, ...current]);
+    setPostBody('');
+    setPostImageUri(null);
+    setPostKind('update');
+  };
+
   if (loading) {
     return (
       <View style={styles.centerState}>
@@ -209,9 +307,13 @@ export default function ProjectDetailScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.heroCard}>
-          <View style={styles.projectIcon}>
-            <FontAwesome5 name="building" size={28} color={colors.primary} />
-          </View>
+          {project.coverImage ? (
+            <Image source={{ uri: project.coverImage }} style={styles.coverImage} />
+          ) : (
+            <View style={styles.projectIcon}>
+              <FontAwesome5 name="building" size={28} color={colors.primary} />
+            </View>
+          )}
           <Text style={styles.name}>{project.nome}</Text>
           <Text style={styles.meta}>{project.settore} - {project.citta}, {project.stato}</Text>
           <Text style={styles.description}>{project.descrizione}</Text>
@@ -315,7 +417,7 @@ export default function ProjectDetailScreen({
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.managementButton}
-                onPress={() => showManagementNotice('Crea opportunita')}
+                onPress={() => void triggerHaptic()}
               >
                 <Ionicons name="megaphone-outline" size={20} color={colors.primary} />
                 <Text style={styles.managementText}>Post</Text>
@@ -323,6 +425,119 @@ export default function ProjectDetailScreen({
             </View>
           </View>
         )}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Post progetto</Text>
+            <Text style={styles.sectionCounter}>{posts.length}</Text>
+          </View>
+
+          {isManager && (
+            <View style={styles.composerCard}>
+              <View style={styles.postKindRow}>
+                {postKindOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.postKindChip,
+                      postKind === option.value && styles.postKindChipActive,
+                    ]}
+                    onPress={() => setPostKind(option.value)}
+                  >
+                    <Text
+                      style={[
+                        styles.postKindText,
+                        postKind === option.value && styles.postKindTextActive,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TextInput
+                style={styles.composerInput}
+                placeholder="Pubblica un aggiornamento per chi segue il progetto..."
+                placeholderTextColor={colors.gray}
+                multiline
+                value={postBody}
+                onChangeText={setPostBody}
+              />
+
+              {postImageUri && (
+                <View style={styles.composerImageWrap}>
+                  <Image source={{ uri: postImageUri }} style={styles.composerImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageButton}
+                    onPress={() => setPostImageUri(null)}
+                  >
+                    <Ionicons name="close" size={18} color={colors.white} />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <View style={styles.composerActions}>
+                <TouchableOpacity style={styles.iconActionButton} onPress={pickPostImage}>
+                  <Ionicons name="image-outline" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.publishButton,
+                    postLoading && styles.publishButtonDisabled,
+                  ]}
+                  onPress={publishPost}
+                  disabled={postLoading}
+                >
+                  {postLoading ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <Text style={styles.publishButtonText}>Pubblica</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {posts.length === 0 ? (
+            <View style={styles.emptyPostsCard}>
+              <Ionicons name="newspaper-outline" size={24} color={colors.gray} />
+              <Text style={styles.emptyPostsText}>Ancora nessun post pubblicato.</Text>
+            </View>
+          ) : (
+            posts.map((post) => (
+              <View key={post.id} style={styles.postCard}>
+                <View style={styles.postHeader}>
+                  <View style={styles.postAvatar}>
+                    <Text style={styles.postAvatarText}>{getInitials(post.authorName)}</Text>
+                  </View>
+                  <View style={styles.postHeaderCopy}>
+                    <Text style={styles.postAuthor}>{post.authorName}</Text>
+                    <Text style={styles.postDate}>{formatPostDate(post.createdAt)}</Text>
+                  </View>
+                  <View style={styles.postBadge}>
+                    <Text style={styles.postBadgeText}>{postKindLabels[post.kind]}</Text>
+                  </View>
+                </View>
+                {post.body ? <Text style={styles.postBody}>{post.body}</Text> : null}
+                {post.imageUri ? (
+                  <Image source={{ uri: post.imageUri }} style={styles.postImage} />
+                ) : null}
+                <View style={styles.postFooter}>
+                  <View style={styles.postMetric}>
+                    <Ionicons name="heart-outline" size={16} color={colors.gray} />
+                    <Text style={styles.postMetricText}>{post.likeCount}</Text>
+                  </View>
+                  <View style={styles.postMetric}>
+                    <Ionicons name="chatbubble-outline" size={15} color={colors.gray} />
+                    <Text style={styles.postMetricText}>{post.commentCount}</Text>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ruoli aperti</Text>
@@ -417,6 +632,12 @@ const createStyles = (
       alignItems: 'center',
       justifyContent: 'center',
     },
+    coverImage: {
+      width: '100%',
+      height: 176,
+      borderRadius: 8,
+      backgroundColor: colors.border,
+    },
     name: { fontSize: 24, fontWeight: 'bold', color: colors.secondary },
     meta: { fontSize: 14, fontWeight: '600', color: colors.primary },
     description: { fontSize: 14, color: colors.secondary, lineHeight: 22 },
@@ -492,6 +713,22 @@ const createStyles = (
       fontWeight: 'bold',
       color: colors.secondary,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    sectionCounter: {
+      minWidth: 28,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: colors.primarySoft,
+      textAlign: 'center',
+      color: colors.primary,
+      fontWeight: '800',
+      fontSize: 12,
+    },
     managementGrid: { flexDirection: 'row', gap: 10 },
     managementButton: {
       flex: 1,
@@ -509,6 +746,153 @@ const createStyles = (
       fontWeight: 'bold',
       color: colors.secondary,
     },
+    composerCard: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      padding: 14,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    postKindRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    postKindChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+      backgroundColor: colors.actionSurface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    postKindChipActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
+    },
+    postKindText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textMuted,
+    },
+    postKindTextActive: { color: colors.primary },
+    composerInput: {
+      minHeight: 88,
+      borderRadius: 8,
+      backgroundColor: colors.inputSurface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 12,
+      color: colors.textStrong,
+      fontSize: 14,
+      lineHeight: 20,
+      textAlignVertical: 'top',
+    },
+    composerImageWrap: {
+      position: 'relative',
+      borderRadius: 8,
+      overflow: 'hidden',
+      backgroundColor: colors.border,
+    },
+    composerImage: { width: '100%', height: 156 },
+    removeImageButton: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      width: 30,
+      height: 30,
+      borderRadius: 8,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    composerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    iconActionButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 8,
+      backgroundColor: colors.actionSurface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    publishButton: {
+      minWidth: 118,
+      height: 42,
+      borderRadius: 8,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+    },
+    publishButtonDisabled: { opacity: 0.72 },
+    publishButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    emptyPostsCard: {
+      borderRadius: 12,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 18,
+      alignItems: 'center',
+      gap: 8,
+    },
+    emptyPostsText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+    postCard: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      padding: 14,
+      gap: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    postHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    postAvatar: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    postAvatarText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    postHeaderCopy: { flex: 1 },
+    postAuthor: { color: colors.secondary, fontSize: 14, fontWeight: '800' },
+    postDate: { color: colors.gray, fontSize: 11, marginTop: 1 },
+    postBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 8,
+      backgroundColor: colors.actionSurface,
+    },
+    postBadgeText: { color: colors.primary, fontSize: 11, fontWeight: '800' },
+    postBody: { color: colors.secondary, fontSize: 14, lineHeight: 21 },
+    postImage: {
+      width: '100%',
+      height: 172,
+      borderRadius: 8,
+      backgroundColor: colors.border,
+    },
+    postFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 10,
+    },
+    postMetric: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    postMetricText: { color: colors.gray, fontSize: 12, fontWeight: '700' },
     tagsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     tag: {
       paddingHorizontal: 12,

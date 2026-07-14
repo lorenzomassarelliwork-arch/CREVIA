@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import type { CompositeScreenProps } from '@react-navigation/native';
+import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
 import type { MaterialTopTabScreenProps } from '@react-navigation/material-top-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +27,7 @@ import {
 import type { ProjectDetail } from '../services/projectDetailService';
 import type { PublicUserProfile } from '../../users/services/userService';
 import type { SearchPresetKey } from '../../search/services/searchService';
+import { getNotificationInboxSummary } from '../../notifications/services/notificationService';
 
 type HomeScreenProps = CompositeScreenProps<
   MaterialTopTabScreenProps<MainTabParamList, 'Home'>,
@@ -52,6 +53,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     [colors, insets.bottom, insets.top]
   );
   const [homeData, setHomeData] = useState<HomeDiscoveryData | null>(null);
+  const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -68,6 +70,25 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     void loadData();
   }, []);
 
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadNotificationSummary = async () => {
+        const response = await getNotificationInboxSummary();
+        if (isActive) {
+          setNotificationUnreadCount(response.data?.unreadCount ?? 0);
+        }
+      };
+
+      void loadNotificationSummary();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
   const openProject = (projectId: string) => {
     navigation.navigate('ProjectDetail', { projectId });
   };
@@ -81,6 +102,10 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       'Search',
       preset ? { preset, presetAppliedAt: Date.now() } : undefined
     );
+  };
+
+  const openNotifications = () => {
+    navigation.navigate('Notifications');
   };
 
   const renderProjectCard = (
@@ -168,6 +193,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.logoText}>CREVIA</Text>
+          <TouchableOpacity
+            activeOpacity={0.78}
+            style={styles.notificationButton}
+            onPress={openNotifications}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color={colors.textStrong}
+            />
+            {notificationUnreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -180,6 +223,24 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logoText}>CREVIA</Text>
+        <TouchableOpacity
+          activeOpacity={0.78}
+          style={styles.notificationButton}
+          onPress={openNotifications}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={22}
+            color={colors.textStrong}
+          />
+          {notificationUnreadCount > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {notificationUnreadCount > 9 ? '9+' : notificationUnreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -291,6 +352,7 @@ const createStyles = (
     header: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       paddingHorizontal: 20,
       paddingTop: Math.max(topInset, 24) + 14,
       paddingBottom: 15,
@@ -303,6 +365,34 @@ const createStyles = (
       fontWeight: 'bold',
       color: colors.primary,
       letterSpacing: 1,
+    },
+    notificationButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      backgroundColor: colors.actionSurface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      position: 'relative',
+    },
+    notificationBadge: {
+      position: 'absolute',
+      top: 5,
+      right: 5,
+      minWidth: 17,
+      height: 17,
+      borderRadius: 9,
+      paddingHorizontal: 4,
+      backgroundColor: colors.error,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.cardBackground,
+    },
+    notificationBadgeText: {
+      color: colors.white,
+      fontSize: 10,
+      fontWeight: '800',
     },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     content: {

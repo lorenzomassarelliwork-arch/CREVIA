@@ -108,7 +108,7 @@ export function useRegisterForm(
       return;
     }
 
-    navigation.navigate('Login');
+    navigation.navigate('BuilderProfileSetup', { registration: form });
   };
 
   return {
