@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ColorPalette } from '../theme/colors';
 import { useAppPreferences } from '../theme/AppPreferencesProvider';
 import { LocalizedText as Text } from '../i18n/LocalizedText';
@@ -29,7 +30,8 @@ export default function BottomNavBar({
   layout,
 }: MaterialTopTabBarProps) {
   const { colors, language, triggerHaptic } = useAppPreferences();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, insets.bottom), [colors, insets.bottom]);
   const labels: Record<TabRouteName, string> = language === 'it'
     ? { Home: 'Home', Chat: 'Chat', Search: 'Cerca', Profile: 'Profilo' }
     : { Home: 'Home', Chat: 'Chat', Search: 'Search', Profile: 'Profile' };
@@ -101,10 +103,14 @@ export default function BottomNavBar({
   );
 }
 
-const createStyles = (colors: ColorPalette) => StyleSheet.create({
-  navBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 85, backgroundColor: colors.cardBackground, flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: 10, paddingTop: 10, zIndex: 999 },
+const createStyles = (colors: ColorPalette, bottomInset: number) => {
+  const bottomPadding = Math.max(bottomInset, 10);
+
+  return StyleSheet.create({
+  navBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 68 + bottomPadding, backgroundColor: colors.cardBackground, flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingBottom: bottomPadding, paddingTop: 8, zIndex: 999 },
   navItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   navText: { fontSize: 10, color: colors.gray, marginTop: 4 },
   navTextActive: { color: colors.primary, fontWeight: 'bold' },
-  indicator: { position: 'absolute', bottom: 8, left: 0, height: 4, borderRadius: 999, backgroundColor: colors.primary },
-});
+  indicator: { position: 'absolute', bottom: bottomPadding - 2, left: 0, height: 4, borderRadius: 999, backgroundColor: colors.primary },
+  });
+};

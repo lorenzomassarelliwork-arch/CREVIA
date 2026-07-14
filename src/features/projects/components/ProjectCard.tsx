@@ -11,13 +11,14 @@ export type ProjectCardPost = Post;
 
 type ProjectCardProps = {
   post: ProjectCardPost;
+  onPress?: () => void;
 };
 
-export default function ProjectCard({ post }: ProjectCardProps) {
+export default function ProjectCard({ post, onPress }: ProjectCardProps) {
   const { colors } = useAppPreferences();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onPress}>
       <View style={styles.cardHeader}>
         <View style={styles.cardAvatar}>
           <FontAwesome5 name="building" size={18} color={colors.primary} />
@@ -39,9 +40,9 @@ export default function ProjectCard({ post }: ProjectCardProps) {
           <Ionicons name="people-outline" size={16} color={colors.gray} />
           <Text style={styles.buildersText}>{post.builders} builders</Text>
         </View>
-        <TouchableOpacity style={styles.candidatiButton}>
+        <View style={styles.candidatiButton}>
           <Text style={styles.candidatiText}>Unisciti</Text>
-        </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );

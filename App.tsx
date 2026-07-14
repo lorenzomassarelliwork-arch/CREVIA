@@ -7,11 +7,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+} from 'react-native-safe-area-context';
 import BottomNavBar from './src/navigation/BottomNavBar';
 import LoginScreen from './src/features/auth/screens/LoginScreen';
 import RegisterScreen from './src/features/auth/screens/RegisterScreen';
 import HomeScreen from './src/features/projects/screens/HomeScreen';
 import SearchScreen from './src/features/projects/screens/SearchScreen';
+import ProjectDetailScreen from './src/features/projects/screens/ProjectDetailScreen';
 import ChatsScreen from './src/features/chat/screens/ChatsScreen';
 import ConversationScreen from './src/features/chat/screens/ConversationScreen';
 import GroupInfoScreen from './src/features/chat/screens/GroupInfoScreen';
@@ -19,6 +24,7 @@ import ContactInfoScreen from './src/features/chat/screens/ContactInfoScreen';
 import ForgotPasswordScreen from './src/features/auth/screens/ForgotPasswordScreen';
 import TerminiCondizioniScreen from './src/features/auth/screens/TerminiCondizioniScreen';
 import ProfileScreen from './src/features/profile/screens/ProfileScreen';
+import PublicUserProfileScreen from './src/features/users/screens/PublicUserProfileScreen';
 import SettingsScreen from './src/features/profile/screens/SettingsScreen';
 import SettingsCategoryScreen from './src/features/profile/screens/SettingsCategoryScreen';
 import SecuritySettingsScreen from './src/features/profile/screens/SecuritySettingsScreen';
@@ -93,6 +99,8 @@ function AppNavigator() {
           <Stack.Screen name="Conversation" component={ConversationScreen} />
           <Stack.Screen name="GroupInfo" component={GroupInfoScreen} />
           <Stack.Screen name="ContactInfo" component={ContactInfoScreen} />
+          <Stack.Screen name="PublicUserProfile" component={PublicUserProfileScreen} />
+          <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="SettingsCategory" component={SettingsCategoryScreen} />
           <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />
@@ -107,8 +115,10 @@ function AppNavigator() {
 
 export default function App() {
   return (
-    <AppPreferencesProvider>
-      <AppNavigator />
-    </AppPreferencesProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <AppPreferencesProvider>
+        <AppNavigator />
+      </AppPreferencesProvider>
+    </SafeAreaProvider>
   );
 }

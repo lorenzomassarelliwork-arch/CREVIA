@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { SearchPresetKey } from '../features/search/services/searchService';
 
 export type SettingsCategoryKey =
   | 'personalization'
@@ -17,7 +18,7 @@ export type AccountManagementAction = 'suspendAccount' | 'deleteAccount';
 export type MainTabParamList = {
   Home: undefined;
   Chat: undefined;
-  Search: undefined;
+  Search: { preset?: SearchPresetKey; presetAppliedAt?: number } | undefined;
   Profile: undefined;
 };
 
@@ -30,6 +31,8 @@ export type RootStackParamList = {
   Conversation: { conversationId: string };
   GroupInfo: { conversationId: string };
   ContactInfo: { conversationId: string };
+  PublicUserProfile: { userId: string };
+  ProjectDetail: { projectId: string };
   Settings: undefined;
   SettingsCategory: { category: SettingsCategoryKey };
   SecuritySettings: { action: SecuritySettingsAction };

@@ -1,0 +1,142 @@
+export type SearchResultType = 'all' | 'user' | 'project';
+export type SearchMansioneFilter = 'all' | 'Studente' | 'Lavoratore';
+export type SearchPresetKey =
+  | 'formingTeams'
+  | 'nearbyProjects'
+  | 'compatibleBuilders';
+
+export type SearchFilters = {
+  type: SearchResultType;
+  mansione: SearchMansioneFilter;
+  settore: string;
+  stato: string;
+  citta: string;
+  preset: SearchPresetKey | null;
+};
+
+export type SearchResult = {
+  id: string;
+  type: 'user' | 'project';
+  title: string;
+  subtitle: string;
+  mansione: 'Studente' | 'Lavoratore' | null;
+  settore: string;
+  stato: string;
+  citta: string;
+  isOnline?: boolean;
+  builders?: number;
+  openRoles?: string[];
+};
+
+export type SearchServiceResult<T> = {
+  data: T;
+  error: string | null;
+};
+
+const wait = (milliseconds = 140) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+export const emptySearchFilters: SearchFilters = {
+  type: 'all',
+  mansione: 'all',
+  settore: '',
+  stato: '',
+  citta: '',
+  preset: null,
+};
+
+export function getPresetSearchState(preset: SearchPresetKey): {
+  filters: SearchFilters;
+  label: string;
+} {
+  if (preset === 'formingTeams') {
+    return {
+      filters: {
+        ...emptySearchFilters,
+        type: 'project',
+        preset,
+      },
+      label: 'Team in formazione',
+    };
+  }
+
+  if (preset === 'nearbyProjects') {
+    return {
+      filters: {
+        ...emptySearchFilters,
+        type: 'project',
+        citta: 'Milano',
+        preset,
+      },
+      label: 'Vicino a te',
+    };
+  }
+
+  return {
+    filters: {
+      ...emptySearchFilters,
+      type: 'user',
+      preset,
+    },
+    label: 'Builder compatibili',
+  };
+}
+
+const normalize = (value: string) => value.trim().toLocaleLowerCase();
+
+export async function searchDirectory(
+  query: string,
+  filters: SearchFilters
+): Promise<SearchServiceResult<SearchResult[]>> {
+  const { mockSearchResults } = await import('../mocks/searchMockData');
+  await wait();
+
+  const normalizedQuery = normalize(query);
+  const normalizedSettore = normalize(filters.settore);
+  const normalizedStato = normalize(filters.stato);
+  const normalizedCitta = normalize(filters.citta);
+
+  const data = mockSearchResults.filter((item) => {
+    const searchableText = normalize(
+      `${item.title} ${item.subtitle} ${item.settore} ${item.stato} ${item.citta} ${item.mansione ?? ''}`
+    );
+
+    const matchesQuery =
+      !normalizedQuery || searchableText.includes(normalizedQuery);
+    const matchesType = filters.type === 'all' || item.type === filters.type;
+    const matchesMansione =
+      filters.mansione === 'all' ||
+      (item.type === 'user' && item.mansione === filters.mansione);
+    const matchesSettore =
+      !normalizedSettore || normalize(item.settore).includes(normalizedSettore);
+    const matchesStato =
+      !normalizedStato || normalize(item.stato).includes(normalizedStato);
+    const matchesCitta =
+      !normalizedCitta || normalize(item.citta).includes(normalizedCitta);
+    const matchesPreset =
+      !filters.preset ||
+      (filters.preset === 'formingTeams' &&
+        item.type === 'project' &&
+        (item.openRoles?.length ?? 0) > 0) ||
+      (filters.preset === 'nearbyProjects' &&
+        item.type === 'project' &&
+        normalize(item.citta) === 'milano') ||
+      (filters.preset === 'compatibleBuilders' &&
+        item.type === 'user' &&
+        ['tecnologia', 'design & ux', 'fintech'].includes(
+          normalize(item.settore)
+        ));
+
+    return (
+      matchesQuery &&
+      matchesType &&
+      matchesMansione &&
+      matchesSettore &&
+      matchesStato &&
+      matchesCitta &&
+      matchesPreset
+    );
+  });
+
+  return { data, error: null };
+}

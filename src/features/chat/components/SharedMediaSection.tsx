@@ -1,10 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Image, Modal, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { CHAT_COPY } from '../chatCopy';
-import type { ChatMediaItem } from '../types';
+import type { ChatDocumentAttachment, ChatMediaItem } from '../types';
 import AudioAttachmentPlayer from './AudioAttachmentPlayer';
 import createStyles from './SharedMediaSection.styles';
 
@@ -23,6 +31,22 @@ export default function SharedMediaSection({ media }: SharedMediaSectionProps) {
       day: '2-digit',
       month: 'short',
     }).format(new Date(value));
+
+  const formatFileSize = (fileSize: number | null) => {
+    if (!fileSize) return '';
+    if (fileSize < 1024 * 1024) {
+      return `${Math.max(1, Math.round(fileSize / 1024))} KB`;
+    }
+    return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const openDocument = async (attachment: ChatDocumentAttachment) => {
+    try {
+      await Linking.openURL(attachment.uri);
+    } catch {
+      Alert.alert(attachment.fileName, copy.sendError);
+    }
+  };
 
   return (
     <>
@@ -49,6 +73,34 @@ export default function SharedMediaSection({ media }: SharedMediaSectionProps) {
               >
                 <Image source={{ uri: item.attachment.uri }} style={styles.mediaImage} />
                 <Text style={styles.mediaDate}>{formatMediaDate(item.sentAt)}</Text>
+              </TouchableOpacity>
+            ) : item.attachment.kind === 'document' ? (
+              <TouchableOpacity
+                key={`${item.messageId}-${item.attachment.id}`}
+                accessibilityRole="button"
+                activeOpacity={0.78}
+                style={styles.documentTile}
+                onPress={() =>
+                  void openDocument(item.attachment as ChatDocumentAttachment)
+                }
+              >
+                <View style={styles.documentIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={22}
+                    color={colors.primary}
+                  />
+                </View>
+                <View style={styles.documentCopy}>
+                  <Text numberOfLines={1} style={styles.documentName}>
+                    {item.attachment.fileName}
+                  </Text>
+                  <Text numberOfLines={1} style={styles.documentMeta}>
+                    {formatFileSize(item.attachment.fileSize) ||
+                      item.attachment.mimeType}
+                  </Text>
+                </View>
+                <Text style={styles.audioDate}>{formatMediaDate(item.sentAt)}</Text>
               </TouchableOpacity>
             ) : (
               <View

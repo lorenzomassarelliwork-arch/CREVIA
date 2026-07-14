@@ -5,6 +5,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Text,
   TextInput,
@@ -13,7 +14,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { RootStackParamList } from '../../../navigation/types';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
@@ -30,6 +33,7 @@ import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 import { CURRENT_USER_ID } from '../services/chatService';
 import type {
   ChatAttachment,
+  ChatDocumentAttachment,
   ChatImageAttachment,
   ChatMessage,
   ChatReplyPreview,
@@ -57,12 +61,26 @@ function formatRecordingDuration(durationMs: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
+function createAttachmentId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function formatFileSize(fileSize: number | null) {
+  if (!fileSize) return '';
+  if (fileSize < 1024 * 1024) return `${Math.max(1, Math.round(fileSize / 1024))} KB`;
+  return `${(fileSize / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function ConversationScreen({
   navigation,
   route,
 }: ConversationScreenProps) {
   const { colors, language, triggerHaptic } = useAppPreferences();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top]
+  );
   const copy = CHAT_COPY[language];
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const [draft, setDraft] = useState('');
@@ -128,7 +146,29 @@ export default function ConversationScreen({
 
   const getMessageSummary = (message: ChatMessage) =>
     message.text ||
-    (message.attachments[0]?.kind === 'image' ? copy.photo : copy.voiceMessage);
+    (message.attachments[0]?.kind === 'image'
+      ? copy.photo
+      : message.attachments[0]?.kind === 'document'
+        ? copy.document
+        : copy.voiceMessage);
+
+  const addPendingAttachments = (attachments: ChatAttachment[]) => {
+    setPendingAttachments((current) => [...current, ...attachments].slice(-4));
+  };
+
+  const createImageAttachment = (
+    asset: ImagePicker.ImagePickerAsset,
+    prefix = 'image'
+  ): ChatImageAttachment => ({
+    id: createAttachmentId(prefix),
+    kind: 'image',
+    uri: asset.uri,
+    fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
+    mimeType: asset.mimeType ?? 'image/jpeg',
+    fileSize: asset.fileSize ?? null,
+    width: asset.width,
+    height: asset.height,
+  });
 
   const handleSend = async () => {
     if ((!draft.trim() && pendingAttachments.length === 0) || isSending) return;
@@ -146,7 +186,7 @@ export default function ConversationScreen({
     }
   };
 
-  const handlePickImage = async () => {
+  const handlePickImageFromLibrary = async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
@@ -162,26 +202,72 @@ export default function ConversationScreen({
       const asset = result.canceled ? null : result.assets[0];
       if (!asset) return;
 
-      const attachment: ChatImageAttachment = {
-        id: `image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        kind: 'image',
-        uri: asset.uri,
-        fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        fileSize: asset.fileSize ?? null,
-        width: asset.width,
-        height: asset.height,
-      };
-      setPendingAttachments((current) => [...current, attachment].slice(-4));
+      addPendingAttachments([createImageAttachment(asset)]);
     } catch {
       Alert.alert(copy.addPhoto, copy.sendError);
     }
   };
 
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(copy.takePhoto, copy.cameraPermissionError);
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      const asset = result.canceled ? null : result.assets[0];
+      if (!asset) return;
+
+      addPendingAttachments([createImageAttachment(asset, 'camera')]);
+    } catch {
+      Alert.alert(copy.takePhoto, copy.sendError);
+    }
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: true,
+        type: '*/*',
+      });
+      if (result.canceled) return;
+
+      const attachments: ChatDocumentAttachment[] = result.assets.map((asset) => ({
+        id: createAttachmentId('document'),
+        kind: 'document',
+        uri: asset.uri,
+        fileName: asset.name,
+        mimeType: asset.mimeType ?? 'application/octet-stream',
+        fileSize: asset.size ?? null,
+      }));
+      addPendingAttachments(attachments);
+    } catch {
+      Alert.alert(copy.addDocument, copy.sendError);
+    }
+  };
+
+  const handleAddAttachment = () => {
+    if (isRecording) return;
+    void triggerHaptic();
+    Alert.alert(copy.addAttachment, undefined, [
+      { text: copy.addPhoto, onPress: () => void handlePickImageFromLibrary() },
+      { text: copy.takePhoto, onPress: () => void handleTakePhoto() },
+      { text: copy.addDocument, onPress: () => void handlePickDocument() },
+      { text: copy.cancel, style: 'cancel' },
+    ]);
+  };
+
   const handleVoiceAction = async () => {
     if (isRecording) {
       const attachment = await finishRecording();
-      if (attachment) setPendingAttachments((current) => [...current, attachment]);
+      if (attachment) addPendingAttachments([attachment]);
       return;
     }
 
@@ -204,6 +290,52 @@ export default function ConversationScreen({
       current.filter((attachment) => attachment.id !== attachmentId)
     );
   };
+
+  const handleOpenDocument = async (attachment: ChatDocumentAttachment) => {
+    try {
+      await Linking.openURL(attachment.uri);
+    } catch {
+      Alert.alert(attachment.fileName, copy.sendError);
+    }
+  };
+
+  const renderDocumentAttachment = (
+    attachment: ChatDocumentAttachment,
+    isOwn: boolean
+  ) => (
+    <TouchableOpacity
+      key={attachment.id}
+      accessibilityRole="button"
+      activeOpacity={0.78}
+      style={[
+        styles.documentAttachment,
+        isOwn ? styles.documentAttachmentOwn : styles.documentAttachmentOther,
+      ]}
+      onPress={() => void handleOpenDocument(attachment)}
+    >
+      <View style={[styles.documentIcon, isOwn && styles.documentIconOwn]}>
+        <Ionicons
+          name="document-text-outline"
+          size={20}
+          color={isOwn ? colors.white : colors.primary}
+        />
+      </View>
+      <View style={styles.documentCopy}>
+        <Text
+          numberOfLines={1}
+          style={[styles.documentName, isOwn && styles.documentNameOwn]}
+        >
+          {attachment.fileName}
+        </Text>
+        <Text
+          numberOfLines={1}
+          style={[styles.documentMeta, isOwn && styles.documentMetaOwn]}
+        >
+          {formatFileSize(attachment.fileSize) || attachment.mimeType}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isOwn = item.senderId === CURRENT_USER_ID;
@@ -270,6 +402,8 @@ export default function ConversationScreen({
                 source={{ uri: attachment.uri }}
                 style={styles.messageImage}
               />
+            ) : attachment.kind === 'document' ? (
+              renderDocumentAttachment(attachment, isOwn)
             ) : (
               <AudioAttachmentPlayer
                 key={attachment.id}
@@ -543,6 +677,17 @@ export default function ConversationScreen({
                 <View key={attachment.id} style={styles.pendingAttachment}>
                   {attachment.kind === 'image' ? (
                     <Image source={{ uri: attachment.uri }} style={styles.pendingImage} />
+                  ) : attachment.kind === 'document' ? (
+                    <View style={styles.pendingDocument}>
+                      <Ionicons
+                        name="document-text-outline"
+                        size={18}
+                        color={colors.primary}
+                      />
+                      <Text numberOfLines={1} style={styles.pendingDocumentText}>
+                        {attachment.fileName}
+                      </Text>
+                    </View>
                   ) : (
                     <View style={styles.pendingAudio}>
                       <Ionicons name="mic" size={17} color={colors.primary} />
@@ -565,11 +710,11 @@ export default function ConversationScreen({
 
           <View style={styles.composer}>
             <TouchableOpacity
-              accessibilityLabel={copy.addPhoto}
+              accessibilityLabel={copy.addAttachment}
               accessibilityRole="button"
               disabled={isRecording}
               style={styles.composerIconButton}
-              onPress={() => void handlePickImage()}
+              onPress={handleAddAttachment}
             >
               <Ionicons name="add" size={24} color={colors.primary} />
             </TouchableOpacity>

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { RootStackParamList } from '../../../navigation/types';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
@@ -58,7 +59,11 @@ const COPY = {
 
 export default function ContactSupportScreen({ navigation }: Props) {
   const { colors, language, triggerHaptic } = useAppPreferences();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top]
+  );
   const copy = COPY[language];
   const [email, setEmail] = useState('');
   const [subjectIndex, setSubjectIndex] = useState(0);

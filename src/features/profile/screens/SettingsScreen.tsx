@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Application from 'expo-application';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMemo } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   RootStackParamList,
@@ -29,7 +30,11 @@ const CATEGORY_KEYS = Object.keys(CATEGORY_ICONS) as SettingsCategoryKey[];
 
 export default function SettingsScreen({ navigation }: SettingsScreenProps) {
   const { colors, language, triggerHaptic } = useAppPreferences();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top]
+  );
   const copy = SETTINGS_COPY[language];
   const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
 

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../../theme/colors';
 import type { RootStackParamList } from '../../../navigation/types';
@@ -24,6 +25,7 @@ type ForgotPasswordScreenProps = NativeStackScreenProps<
 export default function ForgotPasswordScreen({
   navigation,
 }: ForgotPasswordScreenProps) {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [inviato, setInviato] = useState<boolean>(false);
@@ -58,7 +60,15 @@ export default function ForgotPasswordScreen({
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: Math.max(insets.top, 24) + 16,
+          paddingBottom: 24 + Math.max(insets.bottom, 10),
+        },
+      ]}
+    >
       <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
         <Ionicons name="arrow-back" size={24} color={COLORS.secondary} />
       </TouchableOpacity>
@@ -144,7 +154,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     paddingHorizontal: 30,
-    paddingTop: 60,
   },
   backButton: {
     width: 40,

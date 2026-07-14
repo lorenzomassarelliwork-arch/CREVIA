@@ -2,7 +2,11 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorPalette } from '../../../theme/colors';
 
-export default function createStyles(colors: ColorPalette) {
+export default function createStyles(
+  colors: ColorPalette,
+  topInset: number,
+  bottomInset: number
+) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
@@ -10,7 +14,7 @@ export default function createStyles(colors: ColorPalette) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
-      paddingTop: 52,
+      paddingTop: Math.max(topInset, 24) + 10,
       paddingBottom: 13,
       backgroundColor: colors.cardBackground,
       borderBottomWidth: 1,
@@ -89,7 +93,11 @@ export default function createStyles(colors: ColorPalette) {
       borderColor: colors.border,
     },
     searchInput: { flex: 1, color: colors.textStrong, fontSize: 15 },
-    userList: { paddingHorizontal: 20, paddingTop: 15, paddingBottom: 24 },
+    userList: {
+      paddingHorizontal: 20,
+      paddingTop: 15,
+      paddingBottom: 24 + Math.max(bottomInset, 10),
+    },
     emptyList: { flexGrow: 1 },
     separator: { height: 10 },
     userRow: {
@@ -149,7 +157,7 @@ export default function createStyles(colors: ColorPalette) {
     groupFooter: {
       paddingHorizontal: 20,
       paddingTop: 12,
-      paddingBottom: 18,
+      paddingBottom: 12 + Math.max(bottomInset, 10),
       backgroundColor: colors.cardBackground,
       borderTopWidth: 1,
       borderTopColor: colors.border,

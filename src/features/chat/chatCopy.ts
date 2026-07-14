@@ -25,12 +25,17 @@ export const CHAT_COPY: Record<
     replyingTo: string;
     you: string;
     photo: string;
+    document: string;
     voiceMessage: string;
+    addAttachment: string;
     addPhoto: string;
+    takePhoto: string;
+    addDocument: string;
     startRecording: string;
     stopRecording: string;
     cancelRecording: string;
     mediaPermissionError: string;
+    cameraPermissionError: string;
     microphonePermissionError: string;
     createNew: string;
     newConversation: string;
@@ -107,12 +112,17 @@ export const CHAT_COPY: Record<
     replyingTo: 'Risposta a',
     you: 'Tu',
     photo: 'Foto',
+    document: 'Documento',
     voiceMessage: 'Messaggio vocale',
+    addAttachment: 'Aggiungi allegato',
     addPhoto: 'Aggiungi una foto',
+    takePhoto: 'Scatta una foto',
+    addDocument: 'Aggiungi documento',
     startRecording: 'Registra un messaggio vocale',
     stopRecording: 'Termina registrazione',
     cancelRecording: 'Annulla registrazione',
     mediaPermissionError: 'Serve il permesso per accedere alle foto.',
+    cameraPermissionError: 'Serve il permesso per usare la fotocamera.',
     microphonePermissionError: 'Serve il permesso per usare il microfono.',
     createNew: 'Nuova conversazione',
     newConversation: 'Nuova chat',
@@ -188,12 +198,17 @@ export const CHAT_COPY: Record<
     replyingTo: 'Replying to',
     you: 'You',
     photo: 'Photo',
+    document: 'Document',
     voiceMessage: 'Voice message',
+    addAttachment: 'Add attachment',
     addPhoto: 'Add a photo',
+    takePhoto: 'Take a photo',
+    addDocument: 'Add document',
     startRecording: 'Record a voice message',
     stopRecording: 'Stop recording',
     cancelRecording: 'Cancel recording',
     mediaPermissionError: 'Photo library permission is required.',
+    cameraPermissionError: 'Camera permission is required.',
     microphonePermissionError: 'Microphone permission is required.',
     createNew: 'New conversation',
     newConversation: 'New chat',

@@ -2,12 +2,16 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorPalette } from '../../../theme/colors';
 
-export default function createStyles(colors: ColorPalette) {
+export default function createStyles(
+  colors: ColorPalette,
+  topInset: number,
+  bottomInset: number
+) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
       paddingHorizontal: 20,
-      paddingTop: 55,
+      paddingTop: Math.max(topInset, 24) + 14,
       paddingBottom: 18,
       backgroundColor: colors.cardBackground,
       borderBottomWidth: 1,
@@ -50,7 +54,11 @@ export default function createStyles(colors: ColorPalette) {
       borderColor: colors.border,
     },
     searchInput: { flex: 1, color: colors.textStrong, fontSize: 15 },
-    listContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 112 },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 88 + Math.max(bottomInset, 10),
+    },
     separator: { height: 11 },
     conversationCard: {
       minHeight: 82,

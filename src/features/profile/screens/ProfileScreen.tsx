@@ -14,6 +14,7 @@ import {
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProfileScreen } from '../hooks/useProfileScreen';
 import createStyles, { createModalStyles } from './ProfileScreen.styles';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
@@ -46,8 +47,15 @@ const formattaDataMeseAnno = (
 
 export default function ProfileScreen() {
   const { colors: COLORS, language } = useAppPreferences();
-  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const modalStyles = useMemo(() => createModalStyles(COLORS), [COLORS]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(COLORS, insets.top, insets.bottom),
+    [COLORS, insets.bottom, insets.top]
+  );
+  const modalStyles = useMemo(
+    () => createModalStyles(COLORS, insets.top, insets.bottom),
+    [COLORS, insets.bottom, insets.top]
+  );
   const navigation = useNavigation<RootNavigationProp>();
   const {
     profile,

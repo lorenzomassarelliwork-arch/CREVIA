@@ -1,7 +1,11 @@
 import { StyleSheet } from 'react-native';
 import type { ColorPalette } from '../../../theme/colors';
 
-export default function createStyles(COLORS: ColorPalette) {
+export default function createStyles(
+  COLORS: ColorPalette,
+  topInset: number,
+  bottomInset: number
+) {
   return StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
@@ -9,7 +13,7 @@ export default function createStyles(COLORS: ColorPalette) {
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 55,
+    paddingTop: Math.max(topInset, 24) + 14,
     paddingBottom: 15,
     backgroundColor: COLORS.cardBackground,
     borderBottomWidth: 1,
@@ -19,7 +23,10 @@ export default function createStyles(COLORS: ColorPalette) {
   headerIconsContainer: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   headerIcon: { padding: 4, borderRadius: 8 },
   headerIconActive: { backgroundColor: COLORS.successSoft },
-  scrollContent: { padding: 20, paddingBottom: 100 },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 88 + Math.max(bottomInset, 10),
+  },
   profileCard: {
     backgroundColor: COLORS.cardBackground,
     borderRadius: 20,
@@ -228,23 +235,27 @@ export default function createStyles(COLORS: ColorPalette) {
   },
   navItem: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   navText: { fontSize: 11, color: COLORS.gray, marginTop: 4 },
-  });
+});
 }
 
-export const createModalStyles = (COLORS: ColorPalette) => StyleSheet.create({
+export const createModalStyles = (
+  COLORS: ColorPalette,
+  topInset: number,
+  bottomInset: number
+) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.white },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 55,
+    paddingTop: Math.max(topInset, 24) + 14,
     paddingBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   headerTitle: { fontSize: 17, fontWeight: 'bold', color: COLORS.secondary },
-  scroll: { padding: 24, gap: 14 },
+  scroll: { padding: 24, gap: 14, paddingBottom: 40 + Math.max(bottomInset, 10) },
   label: { fontSize: 13, fontWeight: '600', color: COLORS.secondary, marginBottom: -4 },
   input: {
     backgroundColor: COLORS.border,
@@ -300,5 +311,4 @@ export const createModalStyles = (COLORS: ColorPalette) => StyleSheet.create({
     marginBottom: 40,
   },
   buttonDeleteText: { color: COLORS.delete, fontSize: 15, fontWeight: 'bold' },
-  scrollContent: { paddingBottom: 100 },
 });

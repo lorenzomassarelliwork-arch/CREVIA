@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabScreenProps } from '@react-navigation/material-top-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type {
   MainTabParamList,
@@ -68,7 +69,11 @@ function formatTimestamp(value: string, language: 'it' | 'en', yesterday: string
 
 export default function ChatsScreen({ navigation }: ChatsScreenProps) {
   const { colors, language, triggerHaptic } = useAppPreferences();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top]
+  );
   const copy = CHAT_COPY[language];
   const [isNewConversationVisible, setIsNewConversationVisible] = useState(false);
   const {

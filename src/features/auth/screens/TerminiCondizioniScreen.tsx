@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '../../../navigation/types';
 import { COLORS } from '../../../theme/colors'; // importazione dei colori dell'app
 import { LocalizedText as Text } from '../../../i18n/LocalizedText';
@@ -22,6 +23,7 @@ export default function TerminiCondizioniScreen({
   navigation,
   route,
 }: TerminiCondizioniScreenProps) {
+  const insets = useSafeAreaInsets();
   const [haLetto, setHaLetto] = useState<boolean>(false);
   const isViewMode = route.params?.mode === 'view';
 
@@ -43,7 +45,12 @@ export default function TerminiCondizioniScreen({
     <View style={styles.container}>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          { paddingTop: Math.max(insets.top, 24) + 14 },
+        ]}
+      >
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.textStrong} />
         </TouchableOpacity>
@@ -62,7 +69,10 @@ export default function TerminiCondizioniScreen({
       {/* Contenuto */}
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 24 + Math.max(insets.bottom, 10) },
+        ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -159,7 +169,12 @@ export default function TerminiCondizioniScreen({
       </ScrollView>
 
       {/* Pulsante Ho compreso */}
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          { paddingBottom: 16 + Math.max(insets.bottom, 10) },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.button, !isViewMode && !haLetto && styles.buttonDisabled]}
           onPress={handleAccetta}
@@ -191,7 +206,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 55,
     paddingBottom: 15,
     backgroundColor: COLORS.background,
     borderBottomWidth: 1,

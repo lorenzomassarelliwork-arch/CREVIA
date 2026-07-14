@@ -2,7 +2,11 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorPalette } from '../../../theme/colors';
 
-export default function createStyles(colors: ColorPalette) {
+export default function createStyles(
+  colors: ColorPalette,
+  topInset: number,
+  bottomInset: number
+) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
@@ -10,7 +14,7 @@ export default function createStyles(colors: ColorPalette) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 20,
-      paddingTop: 55,
+      paddingTop: Math.max(topInset, 24) + 14,
       paddingBottom: 14,
       backgroundColor: colors.cardBackground,
       borderBottomWidth: 1,
@@ -33,7 +37,10 @@ export default function createStyles(colors: ColorPalette) {
       fontWeight: '700',
     },
     headerSpacer: { width: 40, height: 40 },
-    scrollContent: { padding: 20, paddingBottom: 48 },
+    scrollContent: {
+      padding: 20,
+      paddingBottom: 40 + Math.max(bottomInset, 10),
+    },
     card: {
       backgroundColor: colors.cardBackground,
       borderRadius: 20,

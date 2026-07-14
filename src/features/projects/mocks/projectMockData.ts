@@ -1,0 +1,89 @@
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
+import type { ProjectDetail } from '../services/projectDetailService';
+
+export const mockProjectDetails: ProjectDetail[] = [
+  {
+    id: '1',
+    nome: 'TechStart Milano',
+    settore: 'Tecnologia',
+    stato: 'Italia',
+    citta: 'Milano',
+    descrizione:
+      'Community di giovani builder che sviluppano prodotti digitali per startup, creator e piccole imprese.',
+    founderId: 'user-marco',
+    founderName: 'Marco Rossi',
+    memberIds: ['user-marco', CURRENT_USER_ID],
+    followerCount: 184,
+    builderCount: 12,
+    isFollowing: true,
+    membershipStatus: 'member',
+    openRoles: ['Mobile developer', 'Backend developer', 'UI designer'],
+    updates: [
+      'Stiamo preparando il primo prototipo mobile.',
+      'Cerchiamo persone interessate a validazione e sviluppo MVP.',
+    ],
+  },
+  {
+    id: '2',
+    nome: 'GreenFuture',
+    settore: 'Sostenibilita',
+    stato: 'Italia',
+    citta: 'Bologna',
+    descrizione:
+      'Progetto early stage per soluzioni green nel settore energia, abitudini quotidiane e community locali.',
+    founderId: 'user-giulia',
+    founderName: 'Giulia Marino',
+    memberIds: ['user-giulia'],
+    followerCount: 97,
+    builderCount: 8,
+    isFollowing: false,
+    membershipStatus: 'none',
+    openRoles: ['Marketing', 'Research analyst', 'Content creator'],
+    updates: [
+      'Raccogliamo insight da studenti e lavoratori under 30.',
+      'Il primo gruppo operativo partira nelle prossime settimane.',
+    ],
+  },
+  {
+    id: '3',
+    nome: 'DesignHub',
+    settore: 'Design & UX',
+    stato: 'Italia',
+    citta: 'Firenze',
+    descrizione:
+      'Spazio creativo per designer under 25 che vogliono creare portfolio, casi studio e collaborazioni reali.',
+    founderId: 'user-sara',
+    founderName: 'Sara Bianchi',
+    memberIds: ['user-sara', 'user-andrea'],
+    followerCount: 246,
+    builderCount: 24,
+    isFollowing: false,
+    membershipStatus: 'none',
+    openRoles: ['UX researcher', 'Visual designer', 'No-code builder'],
+    updates: [
+      'Nuova challenge mensile su redesign di app locali.',
+      'I membri possono proporre brief e revisioni portfolio.',
+    ],
+  },
+  {
+    id: '4',
+    nome: 'FinLab',
+    settore: 'Fintech',
+    stato: 'Italia',
+    citta: 'Milano',
+    descrizione:
+      'Laboratorio fintech per sperimentare prodotti su pagamenti digitali, educazione finanziaria e data analysis.',
+    founderId: CURRENT_USER_ID,
+    founderName: 'Lorenzo Rossi',
+    memberIds: [CURRENT_USER_ID, 'user-luca', 'user-marco'],
+    followerCount: 63,
+    builderCount: 6,
+    isFollowing: true,
+    membershipStatus: 'founder',
+    openRoles: ['Data analyst', 'Backend developer', 'Product manager'],
+    updates: [
+      'Hai i permessi founder su questa pagina.',
+      'Prossimo step: creare un post opportunita per nuovi builder.',
+    ],
+  },
+];

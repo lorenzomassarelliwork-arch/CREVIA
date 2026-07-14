@@ -32,7 +32,14 @@ export type ChatAudioAttachment = ChatAttachmentBase & {
   durationMs: number;
 };
 
-export type ChatAttachment = ChatImageAttachment | ChatAudioAttachment;
+export type ChatDocumentAttachment = ChatAttachmentBase & {
+  kind: 'document';
+};
+
+export type ChatAttachment =
+  | ChatImageAttachment
+  | ChatAudioAttachment
+  | ChatDocumentAttachment;
 
 export type ChatReplyPreview = {
   messageId: string;

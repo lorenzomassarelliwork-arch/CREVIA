@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { CHAT_COPY } from '../chatCopy';
@@ -42,7 +43,11 @@ export default function AddGroupParticipantsModal({
   onAdded,
 }: AddGroupParticipantsModalProps) {
   const { colors, language, triggerHaptic } = useAppPreferences();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(
+    () => createStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top]
+  );
   const copy = CHAT_COPY[language];
   const [query, setQuery] = useState('');
   const [users, setUsers] = useState<ChatUser[]>([]);

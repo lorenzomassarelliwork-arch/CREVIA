@@ -2,7 +2,13 @@ import { StyleSheet } from 'react-native';
 
 import type { ColorPalette } from '../../../theme/colors';
 
-export default function createStyles(colors: ColorPalette) {
+export default function createStyles(
+  colors: ColorPalette,
+  topInset: number,
+  bottomInset: number
+) {
+  const bottomPadding = Math.max(bottomInset, 10);
+
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     keyboardView: { flex: 1 },
@@ -12,7 +18,7 @@ export default function createStyles(colors: ColorPalette) {
       alignItems: 'center',
       gap: 12,
       paddingHorizontal: 16,
-      paddingTop: 44,
+      paddingTop: Math.max(topInset, 24) + 8,
       paddingBottom: 12,
       backgroundColor: colors.cardBackground,
       borderBottomWidth: 1,
@@ -83,6 +89,31 @@ export default function createStyles(colors: ColorPalette) {
     quotedReplyText: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
     quotedReplyTextOwn: { color: colors.white },
     messageImage: { width: 220, height: 160, borderRadius: 12, marginBottom: 3 },
+    documentAttachment: {
+      width: 220,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 9,
+      padding: 10,
+      borderRadius: 12,
+      marginBottom: 3,
+    },
+    documentAttachmentOwn: { backgroundColor: colors.toggleTrackOn },
+    documentAttachmentOther: { backgroundColor: colors.inputSurface },
+    documentIcon: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 10,
+      backgroundColor: colors.primarySoft,
+    },
+    documentIconOwn: { backgroundColor: colors.primary },
+    documentCopy: { flex: 1, minWidth: 0 },
+    documentName: { color: colors.textStrong, fontSize: 13, fontWeight: '800' },
+    documentNameOwn: { color: colors.white },
+    documentMeta: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+    documentMetaOwn: { color: colors.white, opacity: 0.82 },
     messageText: { fontSize: 15, lineHeight: 21 },
     messageTextWithAttachment: { marginTop: 7 },
     messageTextOwn: { color: colors.white },
@@ -181,6 +212,23 @@ export default function createStyles(colors: ColorPalette) {
       backgroundColor: colors.primarySoft,
     },
     pendingAudioText: { color: colors.primary, fontSize: 12, fontWeight: '700' },
+    pendingDocument: {
+      width: 128,
+      height: 58,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 7,
+      paddingHorizontal: 10,
+      borderRadius: 12,
+      backgroundColor: colors.primarySoft,
+    },
+    pendingDocumentText: {
+      flex: 1,
+      minWidth: 0,
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
     removeAttachment: {
       position: 'absolute',
       top: -5,
@@ -198,7 +246,7 @@ export default function createStyles(colors: ColorPalette) {
       gap: 8,
       paddingHorizontal: 12,
       paddingTop: 10,
-      paddingBottom: 16,
+      paddingBottom: bottomPadding + 8,
     },
     composerIconButton: {
       width: 42,
@@ -281,7 +329,7 @@ export default function createStyles(colors: ColorPalette) {
       gap: 8,
       minHeight: 70,
       paddingHorizontal: 20,
-      paddingBottom: 10,
+      paddingBottom: bottomPadding,
       backgroundColor: colors.cardBackground,
       borderTopWidth: 1,
       borderTopColor: colors.border,
