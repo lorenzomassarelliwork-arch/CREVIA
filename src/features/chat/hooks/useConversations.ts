@@ -5,6 +5,13 @@ import { getConversationTitle } from '../chatSelectors';
 import { chatService, CURRENT_USER_ID } from '../services/chatService';
 import type { ChatConversation } from '../types';
 
+function sortConversations(items: ChatConversation[]) {
+  return [...items].sort((left, right) => {
+    if (left.isPinned !== right.isPinned) return left.isPinned ? -1 : 1;
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+  });
+}
+
 export function useConversations() {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [query, setQuery] = useState('');
@@ -72,6 +79,60 @@ export function useConversations() {
     }
   }, []);
 
+  const setConversationPinned = useCallback(
+    async (conversationId: string, isPinned: boolean) => {
+      setError(null);
+      try {
+        const updated = await chatService.setConversationPinned(
+          conversationId,
+          isPinned
+        );
+        setConversations((current) =>
+          sortConversations(
+            current.map((conversation) =>
+              conversation.id === conversationId ? updated : conversation
+            )
+          )
+        );
+        return true;
+      } catch (updateError) {
+        setError(
+          updateError instanceof Error
+            ? updateError.message
+            : 'Unable to pin conversation'
+        );
+        return false;
+      }
+    },
+    []
+  );
+
+  const setConversationMuted = useCallback(
+    async (conversationId: string, isMuted: boolean) => {
+      setError(null);
+      try {
+        const updated = await chatService.setConversationMuted(
+          conversationId,
+          isMuted
+        );
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.id === conversationId ? updated : conversation
+          )
+        );
+        return true;
+      } catch (updateError) {
+        setError(
+          updateError instanceof Error
+            ? updateError.message
+            : 'Unable to mute conversation'
+        );
+        return false;
+      }
+    },
+    []
+  );
+
   return {
     conversations: filteredConversations,
     deleteConversation,
@@ -82,6 +143,8 @@ export function useConversations() {
     query,
     refresh: () => loadConversations(true),
     retry: () => loadConversations(),
+    setConversationMuted,
+    setConversationPinned,
     setQuery,
   };
 }

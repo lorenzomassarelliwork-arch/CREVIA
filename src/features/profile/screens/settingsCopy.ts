@@ -21,9 +21,15 @@ export const SETTINGS_COPY = {
       },
       profilePrivacy: {
         title: 'Profilo e Privacy',
-        summary: 'Credenziali, accesso e condizioni',
+        summary: 'Credenziali, privacy e accesso',
         description: 'Gestisci le credenziali e la sicurezza del tuo profilo.',
-        items: ['Modifica email', 'Modifica password', 'Passkey', 'Termini e condizioni'],
+        items: [
+          'Modifica email',
+          'Modifica password',
+          'Passkey',
+          'Utenti bloccati',
+          'Termini e condizioni',
+        ],
       },
       appExperience: {
         title: 'Esperienza in App',
@@ -72,9 +78,15 @@ export const SETTINGS_COPY = {
       },
       profilePrivacy: {
         title: 'Profile and Privacy',
-        summary: 'Credentials, access and terms',
+        summary: 'Credentials, privacy and access',
         description: 'Manage your profile credentials and security.',
-        items: ['Change email', 'Change password', 'Passkey', 'Terms and conditions'],
+        items: [
+          'Change email',
+          'Change password',
+          'Passkey',
+          'Blocked users',
+          'Terms and conditions',
+        ],
       },
       appExperience: {
         title: 'App Experience',

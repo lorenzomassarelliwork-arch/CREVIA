@@ -41,13 +41,13 @@ type ProjectDetailScreenProps = NativeStackScreenProps<
 
 const postKindOptions: { value: ProjectPostKind; label: string }[] = [
   { value: 'update', label: 'Update' },
-  { value: 'milestone', label: 'Milestone' },
+  { value: 'milestone', label: 'Traguardo' },
   { value: 'hiring', label: 'Ruolo aperto' },
 ];
 
 const postKindLabels: Record<ProjectPostKind, string> = {
   update: 'Update',
-  milestone: 'Milestone',
+  milestone: 'Traguardo',
   hiring: 'Ruolo aperto',
 };
 

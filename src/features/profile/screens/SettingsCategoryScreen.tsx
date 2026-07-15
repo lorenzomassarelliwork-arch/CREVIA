@@ -46,6 +46,7 @@ const CATEGORY_ICONS: Record<
     'mail-outline',
     'key-outline',
     'finger-print-outline',
+    'ban-outline',
     'document-text-outline',
   ],
   appExperience: ['people-outline'],
@@ -105,6 +106,11 @@ export default function SettingsCategoryScreen({
     void triggerHaptic();
 
     if (index === 3) {
+      navigation.navigate('BlockedUsers');
+      return;
+    }
+
+    if (index === 4) {
       navigation.navigate('TerminiCondizioni', { mode: 'view' });
       return;
     }

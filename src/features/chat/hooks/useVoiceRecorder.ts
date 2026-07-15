@@ -10,14 +10,40 @@ import {
 
 import type { ChatAudioAttachment } from '../types';
 
+const RECORDING_OPTIONS = {
+  ...RecordingPresets.HIGH_QUALITY,
+  isMeteringEnabled: true,
+};
+
+const WAVEFORM_SAMPLE_COUNT = 38;
+
 function createAttachmentId() {
   return `audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function buildWaveform(samples: number[]) {
+  if (samples.length === 0) return undefined;
+
+  return Array.from({ length: WAVEFORM_SAMPLE_COUNT }, (_, index) => {
+    const start = Math.floor((index * samples.length) / WAVEFORM_SAMPLE_COUNT);
+    const end = Math.max(
+      start + 1,
+      Math.floor(((index + 1) * samples.length) / WAVEFORM_SAMPLE_COUNT)
+    );
+    const bucket = samples.slice(start, Math.min(end, samples.length));
+    const value =
+      bucket.length > 0
+        ? Math.max(...bucket)
+        : samples[samples.length - 1] ?? 0.12;
+    return Math.round(value * 1000) / 1000;
+  });
+}
+
 export function useVoiceRecorder() {
-  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorder = useAudioRecorder(RECORDING_OPTIONS);
   const recorderState = useAudioRecorderState(recorder, 200);
   const isRecordingRef = useRef(false);
+  const waveformSamplesRef = useRef<number[]>([]);
   const [error, setError] = useState<'permission' | 'recording' | null>(null);
 
   useEffect(
@@ -28,6 +54,16 @@ export function useVoiceRecorder() {
     [recorder]
   );
 
+  useEffect(() => {
+    if (!isRecordingRef.current || typeof recorderState.metering !== 'number') return;
+
+    const normalizedLevel = Math.min(
+      1,
+      Math.max(0.08, (recorderState.metering + 55) / 55)
+    );
+    waveformSamplesRef.current.push(normalizedLevel);
+  }, [recorderState.metering]);
+
   const startRecording = async () => {
     setError(null);
     const permission = await AudioModule.requestRecordingPermissionsAsync();
@@ -37,6 +73,7 @@ export function useVoiceRecorder() {
     }
 
     try {
+      waveformSamplesRef.current = [];
       await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
@@ -67,6 +104,7 @@ export function useVoiceRecorder() {
         mimeType: isWeb ? 'audio/webm' : 'audio/mp4',
         fileSize: null,
         durationMs,
+        waveform: buildWaveform(waveformSamplesRef.current),
       };
     } catch {
       setError('recording');
@@ -77,6 +115,7 @@ export function useVoiceRecorder() {
   const cancelRecording = async () => {
     if (isRecordingRef.current) await recorder.stop().catch(() => undefined);
     isRecordingRef.current = false;
+    waveformSamplesRef.current = [];
     await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(
       () => undefined
     );

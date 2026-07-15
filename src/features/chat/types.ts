@@ -30,6 +30,7 @@ export type ChatImageAttachment = ChatAttachmentBase & {
 export type ChatAudioAttachment = ChatAttachmentBase & {
   kind: 'audio';
   durationMs: number;
+  waveform?: number[];
 };
 
 export type ChatDocumentAttachment = ChatAttachmentBase & {
@@ -77,6 +78,8 @@ export type ChatConversation = {
   reportedUserIds: string[];
   lastMessage: ChatMessage | null;
   unreadCount: number;
+  isPinned: boolean;
+  isMuted: boolean;
   updatedAt: string;
 };
 
@@ -104,6 +107,16 @@ export type ChatMediaItem = {
 
 export type MediaPage = {
   items: ChatMediaItem[];
+  nextCursor: string | null;
+};
+
+export type BlockedUserEntry = {
+  user: ChatUser;
+  blockedAt: string;
+};
+
+export type BlockedUsersPage = {
+  items: BlockedUserEntry[];
   nextCursor: string | null;
 };
 
@@ -165,11 +178,21 @@ export interface ChatService {
   ): Promise<ChatConversation>;
   leaveGroup(conversationId: string): Promise<ChatConversation>;
   deleteConversation(conversationId: string): Promise<void>;
+  setConversationPinned(
+    conversationId: string,
+    isPinned: boolean
+  ): Promise<ChatConversation>;
+  setConversationMuted(
+    conversationId: string,
+    isMuted: boolean
+  ): Promise<ChatConversation>;
   setUserBlocked(
     conversationId: string,
     userId: string,
     isBlocked: boolean
   ): Promise<ChatConversation>;
+  setBlockedUser(userId: string, isBlocked: boolean): Promise<void>;
+  listBlockedUsers(options?: ListPageOptions): Promise<BlockedUsersPage>;
   reportUser(conversationId: string, userId: string): Promise<ChatConversation>;
   listConversationMedia(
     conversationId: string,
@@ -177,6 +200,10 @@ export interface ChatService {
   ): Promise<MediaPage>;
   listConversations(options?: ListPageOptions): Promise<ConversationPage>;
   getConversation(
+    conversationId: string,
+    options?: ListPageOptions
+  ): Promise<ConversationDetails>;
+  getConversationPreview(
     conversationId: string,
     options?: ListPageOptions
   ): Promise<ConversationDetails>;

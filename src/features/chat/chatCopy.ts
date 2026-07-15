@@ -66,6 +66,13 @@ export const CHAT_COPY: Record<
     deleteChatTitle: string;
     deleteChatMessage: string;
     delete: string;
+    pinChat: string;
+    unpinChat: string;
+    muteChat: string;
+    unmuteChat: string;
+    previewTitle: string;
+    previewPrivacy: string;
+    previewEmpty: string;
     cancel: string;
     groupInfoError: string;
     contactInfo: string;
@@ -153,6 +160,13 @@ export const CHAT_COPY: Record<
     deleteChatTitle: 'Eliminare questa chat?',
     deleteChatMessage: 'La conversazione verrà rimossa dalla tua lista.',
     delete: 'Elimina',
+    pinChat: 'Fissa',
+    unpinChat: 'Rimuovi pin',
+    muteChat: 'Silenzia',
+    unmuteChat: 'Riattiva',
+    previewTitle: 'Anteprima chat',
+    previewPrivacy: 'I nuovi messaggi restano non letti.',
+    previewEmpty: 'Non ci sono ancora messaggi in questa chat.',
     cancel: 'Annulla',
     groupInfoError: 'Non siamo riusciti ad aggiornare il gruppo.',
     contactInfo: 'Info contatto',
@@ -239,6 +253,13 @@ export const CHAT_COPY: Record<
     deleteChatTitle: 'Delete this chat?',
     deleteChatMessage: 'The conversation will be removed from your list.',
     delete: 'Delete',
+    pinChat: 'Pin',
+    unpinChat: 'Unpin',
+    muteChat: 'Mute',
+    unmuteChat: 'Unmute',
+    previewTitle: 'Chat preview',
+    previewPrivacy: 'New messages remain unread.',
+    previewEmpty: 'There are no messages in this chat yet.',
     cancel: 'Cancel',
     groupInfoError: 'We could not update the group.',
     contactInfo: 'Contact info',

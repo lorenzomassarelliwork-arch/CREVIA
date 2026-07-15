@@ -1,4 +1,5 @@
 import type {
+  BlockedUsersPage,
   ChatConversation,
   ChatMessage,
   ChatRealtimeEvent,
@@ -168,6 +169,8 @@ let conversations: ChatConversation[] = [
     reportedUserIds: [],
     lastMessage: initialMessages[2],
     unreadCount: 2,
+    isPinned: false,
+    isMuted: false,
     updatedAt: initialMessages[2].sentAt,
   },
   {
@@ -182,6 +185,8 @@ let conversations: ChatConversation[] = [
     reportedUserIds: [],
     lastMessage: initialMessages[3],
     unreadCount: 1,
+    isPinned: false,
+    isMuted: false,
     updatedAt: initialMessages[3].sentAt,
   },
   {
@@ -196,6 +201,8 @@ let conversations: ChatConversation[] = [
     reportedUserIds: [],
     lastMessage: initialMessages[4],
     unreadCount: 0,
+    isPinned: false,
+    isMuted: false,
     updatedAt: initialMessages[4].sentAt,
   },
   {
@@ -210,9 +217,13 @@ let conversations: ChatConversation[] = [
     reportedUserIds: [],
     lastMessage: initialMessages[5],
     unreadCount: 3,
+    isPinned: false,
+    isMuted: false,
     updatedAt: initialMessages[5].sentAt,
   },
 ];
+
+const globallyBlockedUsers = new Map<string, string>();
 
 const listeners = new Map<string, Set<(event: ChatRealtimeEvent) => void>>();
 
@@ -326,10 +337,12 @@ const mockChatService: ChatService = {
       participants: [currentUser, participant],
       mainUserIds: [],
       currentUserHasLeft: false,
-      blockedUserIds: [],
+      blockedUserIds: globallyBlockedUsers.has(userId) ? [userId] : [],
       reportedUserIds: [],
       lastMessage: null,
       unreadCount: 0,
+      isPinned: false,
+      isMuted: false,
       updatedAt: createdAt,
     };
     conversations = [conversation, ...conversations];
@@ -359,6 +372,8 @@ const mockChatService: ChatService = {
       reportedUserIds: [],
       lastMessage: null,
       unreadCount: 0,
+      isPinned: false,
+      isMuted: false,
       updatedAt: createdAt,
     };
     conversations = [conversation, ...conversations];
@@ -470,9 +485,6 @@ const mockChatService: ChatService = {
   async deleteConversation(conversationId: string) {
     const conversation = conversations.find((item) => item.id === conversationId);
     if (!conversation) return;
-    if (conversation.kind === 'group' && !conversation.currentUserHasLeft) {
-      throw new Error('Leave the group before deleting the chat');
-    }
     conversations = conversations.filter(
       (conversation) => conversation.id !== conversationId
     );
@@ -480,6 +492,20 @@ const mockChatService: ChatService = {
       (message) => message.conversationId !== conversationId
     );
     listeners.delete(conversationId);
+  },
+
+  async setConversationPinned(conversationId: string, isPinned: boolean) {
+    await wait(90);
+    const conversation = conversations.find((item) => item.id === conversationId);
+    if (!conversation) throw new Error('Conversation not found');
+    return replaceConversation({ ...conversation, isPinned });
+  },
+
+  async setConversationMuted(conversationId: string, isMuted: boolean) {
+    await wait(90);
+    const conversation = conversations.find((item) => item.id === conversationId);
+    if (!conversation) throw new Error('Conversation not found');
+    return replaceConversation({ ...conversation, isMuted });
   },
 
   async setUserBlocked(
@@ -495,10 +521,66 @@ const mockChatService: ChatService = {
       throw new Error('User not found');
     }
 
-    const blockedUserIds = isBlocked
+    const nextBlockedUserIds = isBlocked
       ? Array.from(new Set([...conversation.blockedUserIds, userId]))
       : conversation.blockedUserIds.filter((id) => id !== userId);
-    return replaceConversation({ ...conversation, blockedUserIds });
+    if (isBlocked) {
+      if (!globallyBlockedUsers.has(userId)) {
+        globallyBlockedUsers.set(userId, new Date().toISOString());
+      }
+    } else {
+      globallyBlockedUsers.delete(userId);
+    }
+    return replaceConversation({
+      ...conversation,
+      blockedUserIds: nextBlockedUserIds,
+    });
+  },
+
+  async setBlockedUser(userId: string, isBlocked: boolean) {
+    await wait(100);
+    if (!chatUserDirectory.some((user) => user.id === userId)) {
+      throw new Error('User not found');
+    }
+
+    if (isBlocked) {
+      if (!globallyBlockedUsers.has(userId)) {
+        globallyBlockedUsers.set(userId, new Date().toISOString());
+      }
+    } else {
+      globallyBlockedUsers.delete(userId);
+    }
+    conversations = conversations.map((conversation) =>
+      conversation.kind !== 'direct' ||
+      !conversation.participants.some((participant) => participant.id === userId)
+        ? conversation
+        : {
+            ...conversation,
+            blockedUserIds: isBlocked
+              ? Array.from(new Set([...conversation.blockedUserIds, userId]))
+              : conversation.blockedUserIds.filter((id) => id !== userId),
+          }
+    );
+  },
+
+  async listBlockedUsers(
+    options: ListPageOptions = {}
+  ): Promise<BlockedUsersPage> {
+    throwIfAborted(options.signal);
+    await wait(100);
+    return {
+      items: chatUserDirectory
+        .filter((user) => globallyBlockedUsers.has(user.id))
+        .map((user) => ({
+          user,
+          blockedAt: globallyBlockedUsers.get(user.id) as string,
+        }))
+        .sort(
+          (left, right) =>
+            new Date(right.blockedAt).getTime() - new Date(left.blockedAt).getTime()
+        ),
+      nextCursor: null,
+    };
   },
 
   async reportUser(conversationId: string, userId: string) {
@@ -551,10 +633,10 @@ const mockChatService: ChatService = {
   ): Promise<ConversationPage> {
     throwIfAborted(options.signal);
     return {
-      items: [...conversations].sort(
-        (left, right) =>
-          new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
-      ),
+      items: [...conversations].sort((left, right) => {
+        if (left.isPinned !== right.isPinned) return left.isPinned ? -1 : 1;
+        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+      }),
       nextCursor: null,
     };
   },
@@ -576,6 +658,25 @@ const mockChatService: ChatService = {
             new Date(left.sentAt).getTime() - new Date(right.sentAt).getTime()
         ),
     };
+  },
+
+  async getConversationPreview(
+    conversationId: string,
+    options: ListPageOptions = {}
+  ): Promise<ConversationDetails> {
+    throwIfAborted(options.signal);
+    const conversation = conversations.find((item) => item.id === conversationId);
+    if (!conversation) throw new Error('Conversation not found');
+
+    const previewMessages = messages
+      .filter((message) => message.conversationId === conversationId)
+      .sort(
+        (left, right) =>
+          new Date(left.sentAt).getTime() - new Date(right.sentAt).getTime()
+      )
+      .slice(-6);
+
+    return { conversation, messages: previewMessages };
   },
 
   async listMessages(

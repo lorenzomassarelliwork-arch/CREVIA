@@ -39,6 +39,7 @@ export type RootStackParamList = {
   Settings: undefined;
   SettingsCategory: { category: SettingsCategoryKey };
   SecuritySettings: { action: SecuritySettingsAction };
+  BlockedUsers: undefined;
   ContactSync: undefined;
   AccountManagement: { action: AccountManagementAction };
   ContactSupport: undefined;

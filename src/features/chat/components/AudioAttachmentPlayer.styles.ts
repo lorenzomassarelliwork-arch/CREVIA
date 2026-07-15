@@ -20,17 +20,28 @@ export default function createStyles(colors: ColorPalette) {
       backgroundColor: colors.primary,
     },
     playButtonOwn: { backgroundColor: colors.white },
-    trackColumn: { flex: 1 },
-    track: {
-      height: 4,
-      overflow: 'hidden',
-      borderRadius: 2,
-      backgroundColor: colors.border,
+    trackColumn: { flex: 1, minWidth: 0 },
+    waveform: {
+      height: 26,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
-    trackOwn: { backgroundColor: colors.toggleTrackOn },
-    progress: { height: 4, borderRadius: 2, backgroundColor: colors.primary },
-    progressOwn: { backgroundColor: colors.white },
-    duration: { color: colors.textMuted, fontSize: 10, marginTop: 5 },
+    waveformBar: {
+      width: 2,
+      minHeight: 4,
+      borderRadius: 2,
+      backgroundColor: colors.toggleTrackOff,
+    },
+    waveformBarOwn: { backgroundColor: colors.toggleTrackOn },
+    waveformBarPlayed: { backgroundColor: colors.primary },
+    waveformBarPlayedOwn: { backgroundColor: colors.white },
+    duration: {
+      color: colors.textMuted,
+      fontSize: 10,
+      fontVariant: ['tabular-nums'],
+      marginTop: 3,
+    },
     durationOwn: { color: colors.white, opacity: 0.8 },
   });
 }

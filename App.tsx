@@ -30,6 +30,7 @@ import PublicUserProfileScreen from './src/features/users/screens/PublicUserProf
 import SettingsScreen from './src/features/profile/screens/SettingsScreen';
 import SettingsCategoryScreen from './src/features/profile/screens/SettingsCategoryScreen';
 import SecuritySettingsScreen from './src/features/profile/screens/SecuritySettingsScreen';
+import BlockedUsersScreen from './src/features/profile/screens/BlockedUsersScreen';
 import ContactSyncScreen from './src/features/profile/screens/ContactSyncScreen';
 import AccountManagementScreen from './src/features/profile/screens/AccountManagementScreen';
 import ContactSupportScreen from './src/features/profile/screens/ContactSupportScreen';
@@ -100,14 +101,23 @@ function AppNavigator() {
             options={{ gestureEnabled: false }}
           />
           <Stack.Screen name="Conversation" component={ConversationScreen} />
-          <Stack.Screen name="GroupInfo" component={GroupInfoScreen} />
-          <Stack.Screen name="ContactInfo" component={ContactInfoScreen} />
+          <Stack.Screen
+            name="GroupInfo"
+            component={GroupInfoScreen}
+            options={{ gestureEnabled: true, fullScreenGestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="ContactInfo"
+            component={ContactInfoScreen}
+            options={{ gestureEnabled: true, fullScreenGestureEnabled: false }}
+          />
           <Stack.Screen name="PublicUserProfile" component={PublicUserProfileScreen} />
           <Stack.Screen name="ProjectDetail" component={ProjectDetailScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="SettingsCategory" component={SettingsCategoryScreen} />
           <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />
+          <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
           <Stack.Screen name="ContactSync" component={ContactSyncScreen} />
           <Stack.Screen name="AccountManagement" component={AccountManagementScreen} />
           <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
