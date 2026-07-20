@@ -22,6 +22,7 @@ export type FormattedExperience = Experience & {
 };
 
 type ActiveTab = 'projects' | 'experiences';
+type ProfileImageField = 'foto' | 'fotoCopertina';
 
 type PrivacyValues = Pick<
   Profile,
@@ -41,6 +42,7 @@ const INITIAL_PROFILE: Profile = {
   privacyDataNascita: false,
   privacyNazione: false,
   privacyCitta: false,
+  fotoCopertina: null,
   isBuilder: false,
   builderProfileCompleted: false,
 };
@@ -78,6 +80,8 @@ export function useProfileScreen() {
   const [loading, setLoading] = useState<boolean>(false);
   const [editingProfile, setEditingProfile] = useState<boolean>(false);
   const [photoMenuVisible, setPhotoMenuVisible] = useState<boolean>(false);
+  const [photoMenuTarget, setPhotoMenuTarget] =
+    useState<ProfileImageField>('foto');
   const [isCreateProjectModalVisible, setIsCreateProjectModalVisible] = useState<boolean>(false);
   const [isProjectModalVisible, setIsProjectModalVisible] = useState<boolean>(false);
   const [isExperienceModalVisible, setIsExperienceModalVisible] = useState<boolean>(false);
@@ -153,15 +157,60 @@ export function useProfileScreen() {
     setLoading(false);
   }, [draftProfile]);
 
-  const openPhotoMenu = useCallback(() => setPhotoMenuVisible(true), []);
+  const openPhotoMenu = useCallback(() => {
+    setPhotoMenuTarget('foto');
+    setPhotoMenuVisible(true);
+  }, []);
+  const openCoverPhotoMenu = useCallback(() => {
+    setPhotoMenuTarget('fotoCopertina');
+    setPhotoMenuVisible(true);
+  }, []);
   const closePhotoMenu = useCallback(() => setPhotoMenuVisible(false), []);
   const handlePhotoChoice = useCallback(
     async (option: string) => {
       closePhotoMenu();
-      setProfile((current) => current ? ({ ...current, foto: 'https://via.placeholder.com/150' }) : current);
-      return option;
+
+      const isCoverPhoto = photoMenuTarget === 'fotoCopertina';
+      const permission = option === 'scatta'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permesso richiesto',
+          isCoverPhoto
+            ? 'Consenti a Crevia di accedere alle immagini per aggiornare la copertina.'
+            : 'Consenti a Crevia di accedere alle immagini per aggiornare la foto profilo.'
+        );
+        return;
+      }
+
+      try {
+        const pickerOptions: ImagePicker.ImagePickerOptions = {
+          mediaTypes: ['images'],
+          allowsEditing: true,
+          aspect: isCoverPhoto ? ([16, 9] as [number, number]) : ([1, 1] as [number, number]),
+          quality: 0.85,
+        };
+        const result = option === 'scatta'
+          ? await ImagePicker.launchCameraAsync(pickerOptions)
+          : await ImagePicker.launchImageLibraryAsync(pickerOptions);
+        const imageUri = result.canceled ? null : result.assets[0]?.uri;
+        if (!imageUri) return;
+
+        const imageUpdate: Partial<Pick<Profile, ProfileImageField>> = {
+          [photoMenuTarget]: imageUri,
+        };
+        const response = await updateProfile(imageUpdate);
+        const updatedProfile = response.data ?? (
+          profile ? { ...profile, ...imageUpdate } : null
+        );
+        setProfile(updatedProfile);
+        if (updatedProfile) setDraftProfile(updatedProfile);
+      } catch {
+        Alert.alert('Immagine non aggiornata', 'Riprova tra poco.');
+      }
     },
-    [closePhotoMenu]
+    [closePhotoMenu, photoMenuTarget, profile]
   );
 
   const savePrivacySettings = useCallback(async (privacyValues: PrivacyValues) => {
@@ -408,6 +457,7 @@ export function useProfileScreen() {
     loading,
     editingProfile,
     photoMenuVisible,
+    isCoverPhotoMenu: photoMenuTarget === 'fotoCopertina',
     isCreateProjectModalVisible,
     isProjectModalVisible,
     isExperienceModalVisible,
@@ -421,6 +471,7 @@ export function useProfileScreen() {
     updateDraftProfileField,
     saveProfile,
     openPhotoMenu,
+    openCoverPhotoMenu,
     closePhotoMenu,
     handlePhotoChoice,
     openCreateProjectModal,

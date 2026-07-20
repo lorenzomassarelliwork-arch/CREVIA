@@ -34,6 +34,9 @@ import BlockedUsersScreen from './src/features/profile/screens/BlockedUsersScree
 import ContactSyncScreen from './src/features/profile/screens/ContactSyncScreen';
 import AccountManagementScreen from './src/features/profile/screens/AccountManagementScreen';
 import ContactSupportScreen from './src/features/profile/screens/ContactSupportScreen';
+import ProfileSocialListScreen from './src/features/profile/screens/ProfileSocialListScreen';
+import ProfileExperiencesScreen from './src/features/profile/screens/ProfileExperiencesScreen';
+import ProfileExperienceDetailScreen from './src/features/profile/screens/ProfileExperienceDetailScreen';
 import {
   AppPreferencesProvider,
   useAppPreferences,
@@ -121,6 +124,9 @@ function AppNavigator() {
           <Stack.Screen name="ContactSync" component={ContactSyncScreen} />
           <Stack.Screen name="AccountManagement" component={AccountManagementScreen} />
           <Stack.Screen name="ContactSupport" component={ContactSupportScreen} />
+          <Stack.Screen name="ProfileSocialList" component={ProfileSocialListScreen} />
+          <Stack.Screen name="ProfileExperiences" component={ProfileExperiencesScreen} />
+          <Stack.Screen name="ProfileExperienceDetail" component={ProfileExperienceDetailScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

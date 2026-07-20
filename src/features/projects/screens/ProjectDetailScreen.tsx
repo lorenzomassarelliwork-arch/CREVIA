@@ -415,13 +415,6 @@ export default function ProjectDetailScreen({
                 <Ionicons name="people-outline" size={21} color={colors.primary} />
                 <Text style={styles.managementText}>Membri</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.managementButton}
-                onPress={() => void triggerHaptic()}
-              >
-                <Ionicons name="megaphone-outline" size={20} color={colors.primary} />
-                <Text style={styles.managementText}>Post</Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}

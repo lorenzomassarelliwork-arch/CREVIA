@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -46,6 +47,8 @@ type ConversationScreenProps = NativeStackScreenProps<
 >;
 
 const QUICK_REACTIONS = ['👍', '❤️', '🎉', '😂'];
+const MAX_PENDING_ATTACHMENTS = 10;
+const MAX_GALLERY_IMAGES = 10;
 
 function getInitials(displayName: string) {
   return displayName
@@ -83,6 +86,8 @@ export default function ConversationScreen({
   );
   const copy = CHAT_COPY[language];
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const holdRecordingStartRef = useRef<Promise<boolean> | null>(null);
+  const skipNextVoiceButtonPressRef = useRef(false);
   const [draft, setDraft] = useState('');
   const [pendingAttachments, setPendingAttachments] = useState<ChatAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<ChatReplyPreview | null>(null);
@@ -153,7 +158,9 @@ export default function ConversationScreen({
         : copy.voiceMessage);
 
   const addPendingAttachments = (attachments: ChatAttachment[]) => {
-    setPendingAttachments((current) => [...current, ...attachments].slice(-4));
+    setPendingAttachments((current) =>
+      [...current, ...attachments].slice(0, MAX_PENDING_ATTACHMENTS)
+    );
   };
 
   const createImageAttachment = (
@@ -196,13 +203,18 @@ export default function ConversationScreen({
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_GALLERY_IMAGES,
         allowsEditing: false,
         quality: 0.8,
       });
-      const asset = result.canceled ? null : result.assets[0];
-      if (!asset) return;
+      if (result.canceled || result.assets.length === 0) return;
 
-      addPendingAttachments([createImageAttachment(asset)]);
+      addPendingAttachments(
+        result.assets
+          .slice(0, MAX_GALLERY_IMAGES)
+          .map((asset) => createImageAttachment(asset))
+      );
     } catch {
       Alert.alert(copy.addPhoto, copy.sendError);
     }
@@ -273,6 +285,42 @@ export default function ConversationScreen({
 
     const started = await startRecording();
     if (!started) Alert.alert(copy.startRecording, copy.microphonePermissionError);
+  };
+
+  const handleHoldVoiceStart = () => {
+    if (isRecording || isSending || holdRecordingStartRef.current) return;
+
+    void triggerHaptic();
+    holdRecordingStartRef.current = startRecording();
+  };
+
+  const handleHoldVoiceRelease = () => {
+    const startPromise = holdRecordingStartRef.current;
+    if (!startPromise) return;
+
+    holdRecordingStartRef.current = null;
+    skipNextVoiceButtonPressRef.current = true;
+    setTimeout(() => {
+      skipNextVoiceButtonPressRef.current = false;
+    }, 0);
+
+    void startPromise.then(async (started) => {
+      if (!started) {
+        Alert.alert(copy.startRecording, copy.microphonePermissionError);
+        return;
+      }
+
+      const attachment = await finishRecording();
+      if (!attachment) return;
+
+      void triggerHaptic();
+      const sent = await sendMessage({
+        text: '',
+        attachments: [attachment],
+        replyTo: replyingTo,
+      });
+      if (sent) setReplyingTo(null);
+    });
   };
 
   const handleReply = (message: ChatMessage) => {
@@ -672,7 +720,12 @@ export default function ConversationScreen({
           )}
 
           {pendingAttachments.length > 0 && (
-            <View style={styles.pendingAttachments}>
+            <ScrollView
+              horizontal
+              contentContainerStyle={styles.pendingAttachments}
+              keyboardShouldPersistTaps="handled"
+              showsHorizontalScrollIndicator={false}
+            >
               {pendingAttachments.map((attachment) => (
                 <View key={attachment.id} style={styles.pendingAttachment}>
                   {attachment.kind === 'image' ? (
@@ -705,7 +758,7 @@ export default function ConversationScreen({
                   </TouchableOpacity>
                 </View>
               ))}
-            </View>
+            </ScrollView>
           )}
 
           <View style={styles.composer}>
@@ -756,14 +809,22 @@ export default function ConversationScreen({
               accessibilityRole="button"
               activeOpacity={0.75}
               disabled={isSending}
+              delayLongPress={250}
               style={[
                 styles.sendButton,
                 isRecording && styles.recordingButton,
                 isSending && styles.sendButtonDisabled,
               ]}
-              onPress={() =>
-                void (isRecording ? handleVoiceAction() : canSend ? handleSend() : handleVoiceAction())
-              }
+              onLongPress={canSend || isRecording ? undefined : handleHoldVoiceStart}
+              onPressOut={canSend || isRecording ? undefined : handleHoldVoiceRelease}
+              onPress={() => {
+                if (skipNextVoiceButtonPressRef.current) return;
+                void (isRecording
+                  ? handleVoiceAction()
+                  : canSend
+                    ? handleSend()
+                    : handleVoiceAction());
+              }}
             >
               {isSending ? (
                 <ActivityIndicator color={colors.white} size="small" />

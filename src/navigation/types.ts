@@ -15,6 +15,7 @@ export type SecuritySettingsAction =
   | 'passkey';
 
 export type AccountManagementAction = 'suspendAccount' | 'deleteAccount';
+export type ProfileSocialListType = 'connections' | 'followers';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -43,4 +44,7 @@ export type RootStackParamList = {
   ContactSync: undefined;
   AccountManagement: { action: AccountManagementAction };
   ContactSupport: undefined;
+  ProfileSocialList: { listType: ProfileSocialListType };
+  ProfileExperiences: undefined;
+  ProfileExperienceDetail: { experienceId: string };
 };

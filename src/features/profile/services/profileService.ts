@@ -14,6 +14,7 @@ export type Profile = {
   bio: string;
   bioLanguage?: AppLanguage;
   foto?: string | null;
+  fotoCopertina?: string | null;
   collegamenti: number;
   seguaci: number;
   dataNascita: string;
@@ -51,6 +52,17 @@ export type Experience = {
   descrizione: string;
 };
 
+export type ProfileSocialListType = 'connections' | 'followers';
+
+export type ProfileSocialUser = {
+  id: string;
+  displayName: string;
+  role: string;
+  avatarUrl?: string | null;
+  isOnline: boolean;
+  isFollowedByCurrentUser: boolean;
+};
+
 export type ServiceResult<T> = {
   data: T | null;
   error?: string | null;
@@ -74,6 +86,8 @@ let fakeProfile: Profile = {
   bio: 'Appassionato di UX e startup digitali con una forte propensione al design e ai progetti che uniscono creatività e tecnologia.',
   bioLanguage: 'it',
   foto: null,
+  fotoCopertina:
+    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80',
   collegamenti: 128,
   seguaci: 342,
   dataNascita: '15/03/1991',
@@ -123,6 +137,60 @@ let fakeExperiences: Experience[] = [
   },
 ];
 
+let fakeConnections: ProfileSocialUser[] = [
+  {
+    id: 'user-marco',
+    displayName: 'Marco Rossi',
+    role: 'Sviluppatore Frontend',
+    avatarUrl: null,
+    isOnline: true,
+    isFollowedByCurrentUser: true,
+  },
+  {
+    id: 'user-sara',
+    displayName: 'Sara Bianchi',
+    role: 'UX Designer',
+    avatarUrl: null,
+    isOnline: false,
+    isFollowedByCurrentUser: true,
+  },
+  {
+    id: 'user-luca',
+    displayName: 'Luca Ferrari',
+    role: 'Data Analyst',
+    avatarUrl: null,
+    isOnline: false,
+    isFollowedByCurrentUser: false,
+  },
+];
+
+let fakeFollowers: ProfileSocialUser[] = [
+  {
+    id: 'user-giulia',
+    displayName: 'Giulia Marino',
+    role: 'Marketing Specialist',
+    avatarUrl: null,
+    isOnline: true,
+    isFollowedByCurrentUser: true,
+  },
+  {
+    id: 'user-andrea',
+    displayName: 'Andrea Conti',
+    role: 'Product Designer',
+    avatarUrl: null,
+    isOnline: false,
+    isFollowedByCurrentUser: false,
+  },
+];
+
+function syncSocialCounts() {
+  fakeProfile = {
+    ...fakeProfile,
+    collegamenti: fakeConnections.length,
+    seguaci: fakeFollowers.length,
+  };
+}
+
 let fakeAppPreferences: AppPreferences = {
   notifichePush: true,
   emailAggiornamenti: true,
@@ -132,6 +200,7 @@ let fakeAppPreferences: AppPreferences = {
 
 export async function getProfile(): Promise<ServiceResult<Profile>> {
   await delay(250);
+  syncSocialCounts();
   return { data: { ...fakeProfile } };
 }
 
@@ -140,6 +209,7 @@ export async function updateProfile(
 ): Promise<ServiceResult<Profile>> {
   await delay(250);
   fakeProfile = { ...fakeProfile, ...profile };
+  syncSocialCounts();
   return { data: { ...fakeProfile }, error: null };
 }
 
@@ -210,6 +280,61 @@ export async function deleteProject(
 export async function getExperiences(): Promise<ServiceResult<Experience[]>> {
   await delay(250);
   return { data: [...fakeExperiences] };
+}
+
+export async function getProfileSocialUsers(
+  listType: ProfileSocialListType
+): Promise<ServiceResult<ProfileSocialUser[]>> {
+  await delay(250);
+  const users = listType === 'connections' ? fakeConnections : fakeFollowers;
+  return { data: users.map((user) => ({ ...user })), error: null };
+}
+
+export async function removeProfileSocialUser(
+  listType: ProfileSocialListType,
+  userId: string
+): Promise<ServiceResult<null>> {
+  await delay(200);
+  if (listType === 'connections') {
+    fakeConnections = fakeConnections.filter((user) => user.id !== userId);
+  } else {
+    fakeFollowers = fakeFollowers.filter((user) => user.id !== userId);
+  }
+  syncSocialCounts();
+  return { data: null, error: null };
+}
+
+export async function setProfileSocialFollowState(
+  listType: ProfileSocialListType,
+  userId: string,
+  isFollowedByCurrentUser: boolean
+): Promise<ServiceResult<ProfileSocialUser | null>> {
+  await delay(200);
+  const updateUser = (user: ProfileSocialUser) =>
+    user.id === userId ? { ...user, isFollowedByCurrentUser } : user;
+  const users = listType === 'connections' ? fakeConnections : fakeFollowers;
+  const updatedUser = users.find((user) => user.id === userId);
+  if (!updatedUser) return { data: null, error: 'Utente non trovato.' };
+
+  if (listType === 'connections') {
+    fakeConnections = fakeConnections.map(updateUser);
+  } else {
+    fakeFollowers = fakeFollowers.map(updateUser);
+  }
+
+  return { data: { ...updatedUser, isFollowedByCurrentUser }, error: null };
+}
+
+export async function blockProfileSocialUser(
+  userId: string
+): Promise<ServiceResult<null>> {
+  await delay(200);
+  const wasConnection = fakeConnections.some((user) => user.id === userId);
+  const wasFollower = fakeFollowers.some((user) => user.id === userId);
+  fakeConnections = fakeConnections.filter((user) => user.id !== userId);
+  fakeFollowers = fakeFollowers.filter((user) => user.id !== userId);
+  if (wasConnection || wasFollower) syncSocialCounts();
+  return { data: null, error: null };
 }
 
 export async function addExperience(

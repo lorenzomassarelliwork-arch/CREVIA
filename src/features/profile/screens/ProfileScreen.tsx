@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { useNavigation } from '@react-navigation/native';
-import { useMemo } from 'react';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useMemo, useRef } from 'react';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   View,
@@ -11,6 +11,7 @@ import {
   Platform,
   RefreshControl,
   Image,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -49,6 +50,10 @@ const formattaDataMeseAnno = (
 export default function ProfileScreen() {
   const { colors: COLORS, language } = useAppPreferences();
   const insets = useSafeAreaInsets();
+  const { width: viewportWidth } = useWindowDimensions();
+  const tabPagerRef = useRef<ScrollView>(null);
+  const [tabPagerWidth, setTabPagerWidth] = useState(0);
+  const pagerWidth = tabPagerWidth || Math.max(viewportWidth - 40, 1);
   const styles = useMemo(
     () => createStyles(COLORS, insets.top, insets.bottom),
     [COLORS, insets.bottom, insets.top]
@@ -67,6 +72,7 @@ export default function ProfileScreen() {
     loading,
     editingProfile,
     photoMenuVisible,
+    isCoverPhotoMenu,
     isCreateProjectModalVisible,
     isProjectModalVisible,
     isExperienceModalVisible,
@@ -82,6 +88,7 @@ export default function ProfileScreen() {
     updateDraftProfileField,
     saveProfile,
     openPhotoMenu,
+    openCoverPhotoMenu,
     closePhotoMenu,
     handlePhotoChoice,
     openCreateProjectModal,
@@ -118,6 +125,18 @@ export default function ProfileScreen() {
     if (projectId) navigation.navigate('ProjectDetail', { projectId });
   };
 
+  const openExperiencePage = (experienceId?: string) => {
+    if (experienceId) {
+      navigation.navigate('ProfileExperienceDetail', { experienceId });
+    }
+  };
+
+  const selectContentTab = (tab: 'projects' | 'experiences') => {
+    const pageIndex = tab === 'projects' ? 0 : 1;
+    setActiveTab(tab);
+    tabPagerRef.current?.scrollTo({ x: pageIndex * pagerWidth, animated: true });
+  };
+
   const handleCreateProject = async () => {
     const savedProject = await saveProject();
     if (savedProject?.id) {
@@ -128,6 +147,12 @@ export default function ProfileScreen() {
   const handleSaveProject = async () => {
     await saveProject();
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshProfileData();
+    }, [refreshProfileData])
+  );
 
   useEffect(() => {
     if (profile) {
@@ -205,72 +230,102 @@ export default function ProfileScreen() {
         }
       >
         <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <TouchableOpacity style={styles.avatar} onPress={openPhotoMenu}>
-              {profile?.foto ? (
-                <Text style={{ color: COLORS.primary, fontWeight: "bold" }}>Foto caricata</Text>
-              ) : (
-                <Ionicons name="person" size={40} color={COLORS.primary} />
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.editAvatarButton} onPress={openPhotoMenu}>
-              <Ionicons name="camera" size={15} color={COLORS.white} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            activeOpacity={0.86}
+            style={styles.coverContainer}
+            onPress={openCoverPhotoMenu}
+          >
+            {profile?.fotoCopertina ? (
+              <Image
+                source={{ uri: profile.fotoCopertina }}
+                style={styles.coverImage}
+              />
+            ) : (
+              <View style={styles.coverFallback}>
+                <Ionicons name="shapes-outline" size={38} color={COLORS.white} />
+              </View>
+            )}
+            <View style={styles.editCoverButton}>
+              <Ionicons name="camera" size={16} color={COLORS.white} />
+            </View>
+          </TouchableOpacity>
 
-          {!editingProfile ? (
-            <>
-              <Text style={styles.profileName}>{profile?.nome}</Text>
-              <Text style={styles.profileRuolo}>{profile?.ruolo} • {profile?.settore}</Text>
-              {profile?.isBuilder && (
-                <View style={styles.builderBadge}>
-                  <Ionicons name="construct-outline" size={14} color={COLORS.primary} />
-                  <Text style={styles.builderBadgeText}>Builder</Text>
-                </View>
-              )}
-              <TranslatedContent
-                contentId={`profile:${profile?.id ?? 'current'}:bio`}
-                sourceLanguage={profile?.bioLanguage ?? 'it'}
-                text={profile?.bio ?? ''}
-                style={styles.bioText}
-              />
-            </>
-          ) : (
-            <View style={styles.editUserForm}>
-              <Text style={styles.editLabel}>Nome e Cognome</Text>
-              <TextInput
-                style={styles.editInput}
-                value={draftProfile.nome}
-                onChangeText={(text) => updateDraftProfileField('nome', text)}
-              />
-              <Text style={styles.editLabel}>Qualifica / Ruolo</Text>
-              <TextInput
-                style={styles.editInput}
-                value={draftProfile.ruolo}
-                onChangeText={(text) => updateDraftProfileField('ruolo', text)}
-              />
-              <Text style={styles.editLabel}>Biografia</Text>
-              <TextInput
-                style={[styles.editInput, { height: 60 }]}
-                multiline
-                value={draftProfile.bio}
-                onChangeText={(text) => updateDraftProfileField('bio', text)}
-              />
-              <TouchableOpacity style={styles.buttonDelete} onPress={cancelEditingProfile}>
-                <Text style={styles.buttonDeleteText}>Annulla</Text>
+          <View style={styles.profileContent}>
+            <View style={styles.avatarContainer}>
+              <TouchableOpacity style={styles.avatar} onPress={openPhotoMenu}>
+                {profile?.foto ? (
+                  <Image source={{ uri: profile.foto }} style={styles.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={40} color={COLORS.primary} />
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.editAvatarButton} onPress={openPhotoMenu}>
+                <Ionicons name="camera" size={15} color={COLORS.white} />
               </TouchableOpacity>
             </View>
-          )}
 
-          <View style={styles.statsContainer}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{profile?.collegamenti}</Text>
-              <Text style={styles.statLabel}>Collegamenti</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{profile?.seguaci}</Text>
-              <Text style={styles.statLabel}>Seguaci</Text>
+            {!editingProfile ? (
+              <>
+                <Text style={styles.profileName}>{profile?.nome}</Text>
+                <Text style={styles.profileRuolo}>{profile?.ruolo} • {profile?.settore}</Text>
+                {profile?.isBuilder && (
+                  <View style={styles.builderBadge}>
+                    <Ionicons name="construct-outline" size={14} color={COLORS.primary} />
+                    <Text style={styles.builderBadgeText}>Builder</Text>
+                  </View>
+                )}
+                <TranslatedContent
+                  contentId={`profile:${profile?.id ?? 'current'}:bio`}
+                  sourceLanguage={profile?.bioLanguage ?? 'it'}
+                  text={profile?.bio ?? ''}
+                  style={styles.bioText}
+                />
+              </>
+            ) : (
+              <View style={styles.editUserForm}>
+                <Text style={styles.editLabel}>Nome e Cognome</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={draftProfile.nome}
+                  onChangeText={(text) => updateDraftProfileField('nome', text)}
+                />
+                <Text style={styles.editLabel}>Qualifica / Ruolo</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={draftProfile.ruolo}
+                  onChangeText={(text) => updateDraftProfileField('ruolo', text)}
+                />
+                <Text style={styles.editLabel}>Biografia</Text>
+                <TextInput
+                  style={[styles.editInput, { height: 60 }]}
+                  multiline
+                  value={draftProfile.bio}
+                  onChangeText={(text) => updateDraftProfileField('bio', text)}
+                />
+                <TouchableOpacity style={styles.buttonDelete} onPress={cancelEditingProfile}>
+                  <Text style={styles.buttonDeleteText}>Annulla</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.statsContainer}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={styles.statBox}
+                onPress={() => navigation.navigate('ProfileSocialList', { listType: 'connections' })}
+              >
+                <Text style={styles.statNumber}>{profile?.collegamenti}</Text>
+                <Text style={styles.statLabel}>Collegamenti</Text>
+              </TouchableOpacity>
+              <View style={styles.statDivider} />
+              <TouchableOpacity
+                accessibilityRole="button"
+                style={styles.statBox}
+                onPress={() => navigation.navigate('ProfileSocialList', { listType: 'followers' })}
+              >
+                <Text style={styles.statNumber}>{profile?.seguaci}</Text>
+                <Text style={styles.statLabel}>Seguaci</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -357,7 +412,7 @@ export default function ProfileScreen() {
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === "projects" && styles.tabButtonActive]}
-            onPress={() => setActiveTab('projects')}
+            onPress={() => selectContentTab('projects')}
           >
             <Text style={[styles.tabText, activeTab === "projects" && styles.tabTextActive]}>
               Progetti ({projects.length})
@@ -365,7 +420,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, activeTab === "experiences" && styles.tabButtonActive]}
-            onPress={() => setActiveTab('experiences')}
+            onPress={() => selectContentTab('experiences')}
           >
             <Text style={[styles.tabText, activeTab === "experiences" && styles.tabTextActive]}>
               Esperienze ({experiences.length})
@@ -373,63 +428,94 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.tabContent}>
-          {activeTab === 'projects'
-            ? projects.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  activeOpacity={0.78}
-                  disabled={editingProfile}
-                  style={styles.itemCard}
-                  onPress={() => openProjectPage(item.id)}
-                >
-                  <View style={styles.itemIcon}>
-                    {item.foto ? (
-                      <Image source={{ uri: item.foto }} style={styles.itemImage} />
-                    ) : (
-                      <FontAwesome5 name="project-diagram" size={16} color={COLORS.primary} />
-                    )}
-                  </View>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemTitle}>{item.nome}</Text>
-                    <Text style={styles.itemSubtitle}>{item.settore} • {item.citta}</Text>
-                    <Text numberOfLines={1} style={styles.dateDurationText}>
-                      {item.openRoles.length > 0
-                        ? item.openRoles.join(', ')
-                        : 'Progetto creato da te'}
-                    </Text>
-                  </View>
-                  {editingProfile ? (
-                    <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openProjectModal(item)}>
-                      <Ionicons name="pencil" size={15} color={COLORS.white} />
-                    </TouchableOpacity>
+        <ScrollView
+          ref={tabPagerRef}
+          horizontal
+          pagingEnabled
+          directionalLockEnabled
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onLayout={(event) => {
+            const width = event.nativeEvent.layout.width;
+            if (width !== tabPagerWidth) {
+              setTabPagerWidth(width);
+              const pageIndex = activeTab === 'projects' ? 0 : 1;
+              tabPagerRef.current?.scrollTo({ x: pageIndex * width, animated: false });
+            }
+          }}
+          onMomentumScrollEnd={(event) => {
+            const pageIndex = Math.round(event.nativeEvent.contentOffset.x / pagerWidth);
+            setActiveTab(pageIndex === 0 ? 'projects' : 'experiences');
+          }}
+        >
+          <View style={[styles.tabContent, { width: pagerWidth }]}>
+            {projects.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.78}
+                disabled={editingProfile}
+                style={styles.itemCard}
+                onPress={() => openProjectPage(item.id)}
+              >
+                <View style={styles.itemIcon}>
+                  {item.foto ? (
+                    <Image source={{ uri: item.foto }} style={styles.itemImage} />
                   ) : (
-                    <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
-                  )}
-                </TouchableOpacity>
-              ))
-            : experiences.map((item) => (
-                <View key={item.id} style={styles.itemCard}>
-                  <View style={styles.itemIcon}>
-                    <Ionicons name="briefcase" size={18} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemTitle}>{item.titolo}</Text>
-                    <Text style={styles.itemSubtitle}>{item.settore ? `${item.settore} • ${item.progetto}` : item.progetto}</Text>
-                    <Text style={styles.dateDurationText}>
-                      📅 {formattaDataMeseAnno(item.inizio, language)} — {item.inCorso ? (language === 'it' ? 'Oggi' : 'Today') : formattaDataMeseAnno(item.fine, language)}
-                    </Text>
-                  </View>
-                  {editingProfile ? (
-                    <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openExperienceModal(item)}>
-                      <Ionicons name="pencil" size={15} color={COLORS.white} />
-                    </TouchableOpacity>
-                  ) : (
-                    <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
+                    <FontAwesome5 name="project-diagram" size={16} color={COLORS.primary} />
                   )}
                 </View>
-              ))}
-        </View>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemTitle}>{item.nome}</Text>
+                  <Text style={styles.itemSubtitle}>{item.settore} • {item.citta}</Text>
+                  <Text numberOfLines={1} style={styles.dateDurationText}>
+                    {item.openRoles.length > 0
+                      ? item.openRoles.join(', ')
+                      : 'Progetto creato da te'}
+                  </Text>
+                </View>
+                {editingProfile ? (
+                  <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openProjectModal(item)}>
+                    <Ionicons name="pencil" size={15} color={COLORS.white} />
+                  </TouchableOpacity>
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={[styles.tabContent, { width: pagerWidth }]}>
+            {experiences.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.78}
+                disabled={editingProfile}
+                style={styles.itemCard}
+                onPress={() => openExperiencePage(item.id)}
+              >
+                <View style={styles.itemIcon}>
+                  <Ionicons name="briefcase" size={18} color={COLORS.primary} />
+                </View>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemTitle}>{item.titolo}</Text>
+                  <Text style={styles.itemSubtitle}>{item.settore ? `${item.settore} • ${item.progetto}` : item.progetto}</Text>
+                  <Text style={styles.dateDurationText}>
+                    📅 {formattaDataMeseAnno(item.inizio, language)} — {item.inCorso ? (language === 'it' ? 'Oggi' : 'Today') : formattaDataMeseAnno(item.fine, language)}
+                  </Text>
+                  <Text numberOfLines={2} style={styles.itemDescriptionPreview}>{item.descrizione}</Text>
+                </View>
+                {editingProfile ? (
+                  <TouchableOpacity style={styles.btnModificaRecord} onPress={() => openExperienceModal(item)}>
+                    <Ionicons name="pencil" size={15} color={COLORS.white} />
+                  </TouchableOpacity>
+                ) : (
+                  <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
       </ScrollView>
 
       <Modal visible={createMenuVisible} transparent animationType="fade" onRequestClose={closeCreateMenu}>
@@ -458,7 +544,9 @@ export default function ProfileScreen() {
       <Modal visible={photoMenuVisible} transparent animationType="fade" onRequestClose={closePhotoMenu}>
         <View style={styles.modalOverlay}>
           <View style={styles.actionSheetContainer}>
-            <Text style={styles.actionSheetTitle}>Aggiorna Foto Profilo</Text>
+            <Text style={styles.actionSheetTitle}>
+              {isCoverPhotoMenu ? 'Aggiorna Immagine di Copertina' : 'Aggiorna Foto Profilo'}
+            </Text>
             <TouchableOpacity style={styles.actionSheetBtn} onPress={() => handlePhotoChoice('scatta')}>
               <Ionicons name="camera-outline" size={20} color={COLORS.primary} />
               <Text style={styles.actionSheetBtnText}>Scatta Nuova Foto</Text>

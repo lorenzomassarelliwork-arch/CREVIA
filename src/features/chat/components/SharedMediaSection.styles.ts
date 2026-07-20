@@ -46,7 +46,7 @@ export default function createStyles(colors: ColorPalette) {
     categoryTabCount: { color: colors.gray, fontSize: 10, fontWeight: '800' },
     categoryTabCountSelected: { color: colors.white },
     categoryViewport: { width: '100%', overflow: 'hidden' },
-    categoryContent: { width: '100%' },
+    categoryPage: { paddingHorizontal: 1 },
     emptyMedia: {
       alignItems: 'center',
       justifyContent: 'center',
