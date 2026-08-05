@@ -1,3 +1,5 @@
+import { getUserAvatarUrl } from './userIdentityService';
+
 export type PublicUserExperience = {
   id: string;
   titolo: string;
@@ -33,6 +35,13 @@ export type UserServiceResult<T> = {
 const wait = (milliseconds = 180) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+const clonePublicUser = (user: PublicUserProfile): PublicUserProfile => ({
+  ...user,
+  avatarUrl: getUserAvatarUrl(user.id) ?? user.avatarUrl,
+  esperienze: [...user.esperienze],
+  progetti: [...user.progetti],
+});
+
 export async function getPublicUserProfile(
   userId: string
 ): Promise<UserServiceResult<PublicUserProfile>> {
@@ -41,7 +50,7 @@ export async function getPublicUserProfile(
 
   const user = mockPublicUsers.find((item) => item.id === userId);
   return user
-    ? { data: { ...user, esperienze: [...user.esperienze], progetti: [...user.progetti] }, error: null }
+    ? { data: clonePublicUser(user), error: null }
     : { data: null, error: 'Utente non trovato' };
 }
 
@@ -58,7 +67,7 @@ export async function setBuilderConnection(
   user.isBuilder = isBuilder;
   user.collegamenti += isBuilder ? 1 : -1;
 
-  return { data: { ...user, esperienze: [...user.esperienze], progetti: [...user.progetti] }, error: null };
+  return { data: clonePublicUser(user), error: null };
 }
 
 export async function reportPublicUser(

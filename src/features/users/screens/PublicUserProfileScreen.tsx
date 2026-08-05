@@ -14,6 +14,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { chatService } from '../../chat/services/chatService';
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
 import { getProjectDetail } from '../../projects/services/projectDetailService';
 import type { ProjectDetail } from '../../projects/services/projectDetailService';
 import {
@@ -27,6 +28,15 @@ import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { LocalizedText as Text } from '../../../i18n/LocalizedText';
+import ProfilePostCard from '../../profile/components/ProfilePostCard';
+import { getProfile } from '../../profile/services/profileService';
+import {
+  addProfilePostComment,
+  deleteProfilePostComment,
+  listProfilePosts,
+  toggleProfilePostLike,
+  type ProfilePost,
+} from '../../profile/services/profilePostService';
 
 type PublicUserProfileScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -54,6 +64,9 @@ export default function PublicUserProfileScreen({
   );
   const [profile, setProfile] = useState<PublicUserProfile | null>(null);
   const [projects, setProjects] = useState<ProjectDetail[]>([]);
+  const [posts, setPosts] = useState<ProfilePost[]>([]);
+  const [currentUserName, setCurrentUserName] = useState('Luca Rossi');
+  const [currentUserAvatar, setCurrentUserAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -71,15 +84,20 @@ export default function PublicUserProfileScreen({
       if (!response.data) {
         setProfile(null);
         setProjects([]);
+        setPosts([]);
         setError(response.error ?? 'Profilo non disponibile');
         setLoading(false);
         setRefreshing(false);
         return;
       }
 
-      const projectResults = await Promise.all(
-        response.data.progetti.map((projectId) => getProjectDetail(projectId))
-      );
+      const [projectResults, postsResponse, currentProfileResponse] = await Promise.all([
+        Promise.all(
+          response.data.progetti.map((projectId) => getProjectDetail(projectId))
+        ),
+        listProfilePosts(response.data.id, CURRENT_USER_ID),
+        getProfile(),
+      ]);
 
       setProfile(response.data);
       setProjects(
@@ -87,6 +105,9 @@ export default function PublicUserProfileScreen({
           .map((item) => item.data)
           .filter((item): item is ProjectDetail => Boolean(item))
       );
+      setPosts(postsResponse.data ?? []);
+      setCurrentUserName(currentProfileResponse.data?.nome ?? 'Luca Rossi');
+      setCurrentUserAvatar(currentProfileResponse.data?.foto ?? null);
       setLoading(false);
       setRefreshing(false);
     },
@@ -182,6 +203,81 @@ export default function PublicUserProfileScreen({
     if (response.data) {
       Alert.alert('Segnalazione inviata', 'Grazie, controlleremo il profilo.');
     }
+  };
+
+  const updatePost = (updatedPost: ProfilePost) => {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === updatedPost.id ? updatedPost : post
+      )
+    );
+  };
+
+  const togglePostLike = async (postId: string) => {
+    setActionLoading(`${postId}-like`);
+    const response = await toggleProfilePostLike(postId, CURRENT_USER_ID);
+    if (response.data) updatePost(response.data);
+    setActionLoading(null);
+  };
+
+  const addPostComment = async (postId: string, body: string) => {
+    setActionLoading(`${postId}-comment`);
+    const response = await addProfilePostComment(
+      postId,
+      CURRENT_USER_ID,
+      currentUserName,
+      body,
+      currentUserAvatar
+    );
+    if (response.data) updatePost(response.data);
+    if (response.error) Alert.alert('Commento non pubblicato', response.error);
+    setActionLoading(null);
+    return Boolean(response.data);
+  };
+
+  const openPostEntity = (
+    entityType: 'user' | 'project',
+    entityId: string
+  ) => {
+    if (entityType === 'project') {
+      navigation.navigate('ProjectDetail', { projectId: entityId });
+      return;
+    }
+    if (entityId === CURRENT_USER_ID) {
+      navigation.navigate('Main', { screen: 'Profile' });
+      return;
+    }
+    if (entityId !== profile?.id) {
+      navigation.push('PublicUserProfile', { userId: entityId });
+    }
+  };
+
+  const removePostComment = (postId: string, commentId: string) => {
+    Alert.alert(
+      'Eliminare il commento?',
+      'Il commento verrà rimosso dal post.',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(`${postId}-comment-delete-${commentId}`);
+            const response = await deleteProfilePostComment(
+              postId,
+              commentId,
+              CURRENT_USER_ID
+            );
+            if (response.data) updatePost(response.data);
+            if (response.error) {
+              Alert.alert('Commento non eliminato', response.error);
+            }
+            setActionLoading(null);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   if (loading) {
@@ -380,6 +476,31 @@ export default function PublicUserProfileScreen({
               </View>
             </View>
           ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Post</Text>
+          {posts.length > 0 ? (
+            posts.map((post) => (
+              <ProfilePostCard
+                key={post.id}
+                post={post}
+                currentUserId={CURRENT_USER_ID}
+                actionLoading={actionLoading}
+                onToggleLike={togglePostLike}
+                onAddComment={addPostComment}
+                onDeleteComment={removePostComment}
+                onOpenEntity={openPostEntity}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyPostsCard}>
+              <Ionicons name="newspaper-outline" size={28} color={colors.gray} />
+              <Text style={styles.emptyPostsText}>
+                Questo utente non ha ancora pubblicato post.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -628,4 +749,14 @@ const createStyles = (
       color: colors.secondary,
     },
     listSubtitle: { fontSize: 13, color: colors.gray },
+    emptyPostsCard: {
+      padding: 20,
+      borderRadius: 16,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      gap: 8,
+    },
+    emptyPostsText: { color: colors.textMuted, fontSize: 13, textAlign: 'center' },
   });

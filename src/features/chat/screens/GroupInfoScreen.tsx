@@ -162,6 +162,14 @@ export default function GroupInfoScreen({
     ]);
   };
 
+  const openParticipantProfile = (participant: ChatUser) => {
+    if (participant.id === CURRENT_USER_ID) {
+      navigation.navigate('Main', { screen: 'Profile' });
+    } else {
+      navigation.navigate('PublicUserProfile', { userId: participant.id });
+    }
+  };
+
   const leaveGroup = () => {
     if (!conversation || conversation.currentUserHasLeft) return;
 
@@ -315,30 +323,36 @@ export default function GroupInfoScreen({
                     styles.participantRowLast,
                 ]}
               >
-                {participant.avatarUrl ? (
-                  <Image source={{ uri: participant.avatarUrl }} style={styles.avatar} />
-                ) : (
-                  <View style={[styles.avatar, styles.avatarFallback]}>
-                    <Text style={styles.avatarInitials}>
-                      {getInitials(participant.displayName)}
+                <TouchableOpacity
+                  style={styles.participantProfileButton}
+                  activeOpacity={0.72}
+                  onPress={() => openParticipantProfile(participant)}
+                >
+                  {participant.avatarUrl ? (
+                    <Image source={{ uri: participant.avatarUrl }} style={styles.avatar} />
+                  ) : (
+                    <View style={[styles.avatar, styles.avatarFallback]}>
+                      <Text style={styles.avatarInitials}>
+                        {getInitials(participant.displayName)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.participantCopy}>
+                    <View style={styles.participantNameRow}>
+                      <Text numberOfLines={1} style={styles.participantName}>
+                        {isCurrentUser ? copy.you : participant.displayName}
+                      </Text>
+                      {isMain && (
+                        <View style={styles.mainBadge}>
+                          <Text style={styles.mainBadgeText}>{copy.mainLabel}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text numberOfLines={1} style={styles.participantRole}>
+                      {participant.role}
                     </Text>
                   </View>
-                )}
-                <View style={styles.participantCopy}>
-                  <View style={styles.participantNameRow}>
-                    <Text numberOfLines={1} style={styles.participantName}>
-                      {isCurrentUser ? copy.you : participant.displayName}
-                    </Text>
-                    {isMain && (
-                      <View style={styles.mainBadge}>
-                        <Text style={styles.mainBadgeText}>{copy.mainLabel}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text numberOfLines={1} style={styles.participantRole}>
-                    {participant.role}
-                  </Text>
-                </View>
+                </TouchableOpacity>
                 {canManageRole && (
                   <TouchableOpacity
                     accessibilityLabel={copy.manageParticipant}

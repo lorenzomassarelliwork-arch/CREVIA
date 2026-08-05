@@ -62,9 +62,27 @@ export default function createStyles(
     presence: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
     typingText: { color: colors.primary, fontWeight: '600' },
     messagesContent: { flexGrow: 1, paddingHorizontal: 16, paddingVertical: 18 },
-    messageGroup: { maxWidth: '86%', marginBottom: 12 },
+    messageGroup: { maxWidth: '92%', marginBottom: 12 },
     messageGroupOwn: { alignSelf: 'flex-end', alignItems: 'flex-end' },
     messageGroupOther: { alignSelf: 'flex-start', alignItems: 'flex-start' },
+    messageContentRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: 7,
+    },
+    messageContentRowOwn: { justifyContent: 'flex-end' },
+    messageSenderAvatarButton: { alignSelf: 'flex-end' },
+    messageSenderAvatar: { width: 30, height: 30, borderRadius: 10 },
+    messageSenderAvatarFallback: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primarySoft,
+    },
+    messageSenderInitials: {
+      color: colors.primary,
+      fontSize: 9,
+      fontWeight: '800',
+    },
     messageBubble: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 7, borderRadius: 18 },
     messageBubbleOwn: { backgroundColor: colors.primary, borderBottomRightRadius: 5 },
     messageBubbleOther: {

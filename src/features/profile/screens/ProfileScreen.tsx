@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  Pressable,
   ActivityIndicator,
   Platform,
   RefreshControl,
@@ -26,6 +27,8 @@ import {
 } from '../../../i18n/LocalizedText';
 import { TranslatedContent } from '../../../i18n/TranslatedContent';
 import type { RootStackParamList } from '../../../navigation/types';
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
+import ProfilePostCard from '../components/ProfilePostCard';
 
 type PrivacyDraft = {
   privacyDataNascita: boolean;
@@ -53,6 +56,10 @@ export default function ProfileScreen() {
   const { width: viewportWidth } = useWindowDimensions();
   const tabPagerRef = useRef<ScrollView>(null);
   const [tabPagerWidth, setTabPagerWidth] = useState(0);
+  const [tabPageHeights, setTabPageHeights] = useState({
+    projects: 0,
+    experiences: 0,
+  });
   const pagerWidth = tabPagerWidth || Math.max(viewportWidth - 40, 1);
   const styles = useMemo(
     () => createStyles(COLORS, insets.top, insets.bottom),
@@ -68,6 +75,7 @@ export default function ProfileScreen() {
     draftProfile,
     projects,
     experiences,
+    posts,
     activeTab,
     loading,
     editingProfile,
@@ -109,7 +117,25 @@ export default function ProfileScreen() {
     setActiveTab,
     setShowInizioPicker,
     setShowFinePicker,
+    postEditorVisible,
+    selectedPost,
+    postDraftBody,
+    postDraftImageUri,
+    postSaving,
+    postActionLoading,
+    openCreatePost,
+    openEditPost,
+    closePostEditor,
+    setPostDraftBody,
+    setPostDraftImageUri,
+    pickPostImage,
+    savePost,
+    removePost,
+    togglePostLike,
+    addPostComment,
+    removePostComment,
   } = useProfileScreen();
+  const activeTabHeight = tabPageHeights[activeTab];
   const [createMenuVisible, setCreateMenuVisible] = useState<boolean>(false);
   const [privacyEditMode, setPrivacyEditMode] = useState<boolean>(false);
   const [privacyDraft, setPrivacyDraft] = useState<PrivacyDraft>({
@@ -131,6 +157,19 @@ export default function ProfileScreen() {
     }
   };
 
+  const openPostEntity = (
+    entityType: 'user' | 'project',
+    entityId: string
+  ) => {
+    if (entityType === 'project') {
+      navigation.navigate('ProjectDetail', { projectId: entityId });
+      return;
+    }
+    if (entityId !== (profile?.id ?? CURRENT_USER_ID)) {
+      navigation.navigate('PublicUserProfile', { userId: entityId });
+    }
+  };
+
   const selectContentTab = (tab: 'projects' | 'experiences') => {
     const pageIndex = tab === 'projects' ? 0 : 1;
     setActiveTab(tab);
@@ -143,6 +182,7 @@ export default function ProfileScreen() {
       navigation.navigate('ProjectDetail', { projectId: savedProject.id });
     }
   };
+
 
   const handleSaveProject = async () => {
     await saveProject();
@@ -432,6 +472,8 @@ export default function ProfileScreen() {
           ref={tabPagerRef}
           horizontal
           pagingEnabled
+          style={activeTabHeight > 0 ? { height: activeTabHeight } : undefined}
+          contentContainerStyle={styles.tabPagerContent}
           directionalLockEnabled
           nestedScrollEnabled
           showsHorizontalScrollIndicator={false}
@@ -449,7 +491,17 @@ export default function ProfileScreen() {
             setActiveTab(pageIndex === 0 ? 'projects' : 'experiences');
           }}
         >
-          <View style={[styles.tabContent, { width: pagerWidth }]}>
+          <View
+            style={[styles.tabContent, { width: pagerWidth }]}
+            onLayout={(event) => {
+              const height = event.nativeEvent.layout.height;
+              setTabPageHeights((current) =>
+                current.projects === height
+                  ? current
+                  : { ...current, projects: height }
+              );
+            }}
+          >
             {projects.map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -485,7 +537,17 @@ export default function ProfileScreen() {
             ))}
           </View>
 
-          <View style={[styles.tabContent, { width: pagerWidth }]}>
+          <View
+            style={[styles.tabContent, { width: pagerWidth }]}
+            onLayout={(event) => {
+              const height = event.nativeEvent.layout.height;
+              setTabPageHeights((current) =>
+                current.experiences === height
+                  ? current
+                  : { ...current, experiences: height }
+              );
+            }}
+          >
             {experiences.map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -516,11 +578,58 @@ export default function ProfileScreen() {
             ))}
           </View>
         </ScrollView>
+
+        <View style={styles.postsSection}>
+          <View style={styles.postsHeader}>
+            <View>
+              <Text style={styles.postsTitle}>I tuoi post</Text>
+              <Text style={styles.postsSubtitle}>
+                Condividi aggiornamenti e idee con la tua rete.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.addPostButton}
+              onPress={openCreatePost}
+              disabled={postSaving}
+            >
+              <Ionicons name="add" size={18} color={COLORS.white} />
+              <Text style={styles.addPostButtonText}>Scrivi</Text>
+            </TouchableOpacity>
+          </View>
+
+          {posts.length === 0 ? (
+            <View style={styles.emptyPostsCard}>
+              <Ionicons name="create-outline" size={30} color={COLORS.gray} />
+              <Text style={styles.emptyPostsTitle}>Nessun post</Text>
+              <Text style={styles.emptyPostsText}>
+                Pubblica il primo aggiornamento sul tuo profilo.
+              </Text>
+            </View>
+          ) : (
+            posts.map((post) => (
+              <ProfilePostCard
+                key={post.id}
+                post={post}
+                currentUserId={profile?.id ?? CURRENT_USER_ID}
+                actionLoading={postActionLoading}
+                onEdit={openEditPost}
+                onDeletePost={removePost}
+                onToggleLike={togglePostLike}
+                onAddComment={addPostComment}
+                onDeleteComment={removePostComment}
+                onOpenEntity={openPostEntity}
+              />
+            ))
+          )}
+        </View>
       </ScrollView>
 
       <Modal visible={createMenuVisible} transparent animationType="fade" onRequestClose={closeCreateMenu}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.actionSheetContainer}>
+        <Pressable style={styles.modalOverlay} onPress={closeCreateMenu}>
+          <Pressable
+            style={styles.actionSheetContainer}
+            onPress={(event) => event.stopPropagation()}
+          >
             <Text style={styles.actionSheetTitle}>Aggiungi contenuto</Text>
             <Text style={styles.actionSheetDescription}>Scegli se creare un nuovo progetto o una nuova esperienza professionale.</Text>
             <TouchableOpacity style={styles.actionSheetBtn} onPress={() => { closeCreateMenu(); openCreateProjectModal(); }}>
@@ -537,13 +646,16 @@ export default function ProfileScreen() {
             >
               <Text style={[styles.actionSheetBtnText, styles.actionSheetCancelText]}>Annulla</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal visible={photoMenuVisible} transparent animationType="fade" onRequestClose={closePhotoMenu}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.actionSheetContainer}>
+        <Pressable style={styles.modalOverlay} onPress={closePhotoMenu}>
+          <Pressable
+            style={styles.actionSheetContainer}
+            onPress={(event) => event.stopPropagation()}
+          >
             <Text style={styles.actionSheetTitle}>
               {isCoverPhotoMenu ? 'Aggiorna Immagine di Copertina' : 'Aggiorna Foto Profilo'}
             </Text>
@@ -561,7 +673,77 @@ export default function ProfileScreen() {
             >
               <Text style={[styles.actionSheetBtnText, { color: COLORS.delete, fontWeight: 'bold' }]}>Annulla</Text>
             </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={postEditorVisible}
+        animationType="slide"
+        onRequestClose={closePostEditor}
+      >
+        <View style={modalStyles.container}>
+          <View style={modalStyles.header}>
+            <TouchableOpacity onPress={closePostEditor} disabled={postSaving}>
+              <Ionicons name="close" size={24} color={COLORS.textStrong} />
+            </TouchableOpacity>
+            <Text style={modalStyles.headerTitle}>
+              {selectedPost ? 'Modifica post' : 'Nuovo post'}
+            </Text>
+            <View style={{ width: 24 }} />
           </View>
+          <ScrollView
+            contentContainerStyle={modalStyles.scroll}
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={modalStyles.label}>Cosa vuoi condividere?</Text>
+            <TextInput
+              style={modalStyles.postInput}
+              multiline
+              textAlignVertical="top"
+              placeholder="Scrivi un aggiornamento..."
+              placeholderTextColor={COLORS.gray}
+              value={postDraftBody}
+              onChangeText={setPostDraftBody}
+              editable={!postSaving}
+            />
+
+            {postDraftImageUri && (
+              <View style={modalStyles.postImageWrap}>
+                <Image source={{ uri: postDraftImageUri }} style={modalStyles.postImage} />
+                <TouchableOpacity
+                  style={modalStyles.removePostImageButton}
+                  onPress={() => setPostDraftImageUri(null)}
+                  disabled={postSaving}
+                >
+                  <Ionicons name="close" size={18} color={COLORS.white} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={modalStyles.addImageButton}
+              onPress={pickPostImage}
+              disabled={postSaving}
+            >
+              <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+              <Text style={modalStyles.addImageText}>Aggiungi immagine</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={modalStyles.buttonSubmit}
+              onPress={() => void savePost()}
+              disabled={postSaving}
+            >
+              {postSaving ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={modalStyles.buttonSubmitText}>
+                  {selectedPost ? 'Salva modifiche' : 'Pubblica post'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </Modal>
 

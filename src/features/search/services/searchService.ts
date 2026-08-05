@@ -1,3 +1,8 @@
+import { getProfile } from '../../profile/services/profileService';
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
+import { mockPublicUsers } from '../../users/mocks/userMockData';
+import { getCompatibleBuilders } from '../../users/services/builderCompatibilityService';
+
 export type SearchResultType = 'all' | 'user' | 'project';
 export type SearchMansioneFilter = 'all' | 'Studente' | 'Lavoratore';
 export type SearchPresetKey =
@@ -24,6 +29,7 @@ export type SearchResult = {
   stato: string;
   citta: string;
   isOnline?: boolean;
+  avatarUrl?: string | null;
   builders?: number;
   openRoles?: string[];
 };
@@ -89,8 +95,17 @@ export async function searchDirectory(
   filters: SearchFilters
 ): Promise<SearchServiceResult<SearchResult[]>> {
   const { mockProjectDetails } = await import('../../projects/mocks/projectMockData');
-  const { mockPublicUsers } = await import('../../users/mocks/userMockData');
   await wait();
+
+  const profileResponse =
+    filters.preset === 'compatibleBuilders' ? await getProfile() : null;
+  const compatibleBuilderIds = profileResponse?.data
+    ? new Set(
+        (
+          await getCompatibleBuilders(CURRENT_USER_ID, profileResponse.data)
+        ).data?.map((user) => user.id) ?? []
+      )
+    : null;
 
   const searchResults: SearchResult[] = [
     ...mockPublicUsers.map((user) => ({
@@ -103,6 +118,7 @@ export async function searchDirectory(
       stato: user.stato,
       citta: user.citta,
       isOnline: user.isOnline,
+      avatarUrl: user.avatarUrl,
     })),
     ...mockProjectDetails.map((project) => ({
       id: project.id,
@@ -150,9 +166,7 @@ export async function searchDirectory(
         normalize(item.citta) === 'milano') ||
       (filters.preset === 'compatibleBuilders' &&
         item.type === 'user' &&
-        ['tecnologia', 'design & ux', 'fintech'].includes(
-          normalize(item.settore)
-        ));
+        Boolean(compatibleBuilderIds?.has(item.id)));
 
     return (
       matchesQuery &&

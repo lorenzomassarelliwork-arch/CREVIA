@@ -1,4 +1,9 @@
 import { mockProjectDetails } from '../mocks/projectMockData';
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
+import {
+  getSavedProjectIds,
+  setProjectSaved as persistProjectSaved,
+} from './savedProjectService';
 
 export type ProjectMembershipStatus = 'none' | 'pending' | 'member' | 'founder' | 'admin';
 
@@ -16,6 +21,7 @@ export type ProjectDetail = {
   followerCount: number;
   builderCount: number;
   isFollowing: boolean;
+  isSaved: boolean;
   membershipStatus: ProjectMembershipStatus;
   openRoles: string[];
   updates: string[];
@@ -52,15 +58,28 @@ const cloneProject = (project: ProjectDetail): ProjectDetail => ({
   updates: [...project.updates],
 });
 
+const cloneProjectForCurrentUser = async (
+  project: ProjectDetail
+): Promise<ProjectDetail> => {
+  const savedProjectIds = await getSavedProjectIds(CURRENT_USER_ID);
+  return cloneProject({
+    ...project,
+    isSaved: savedProjectIds.includes(project.id),
+  });
+};
+
 export async function getProjectDetail(
   projectId: string
 ): Promise<ProjectServiceResult<ProjectDetail>> {
   await wait();
 
   const project = mockProjectDetails.find((item) => item.id === projectId);
-  return project
-    ? { data: cloneProject(project), error: null }
-    : { data: null, error: 'Progetto non trovato' };
+  if (!project) return { data: null, error: 'Progetto non trovato' };
+
+  return {
+    data: await cloneProjectForCurrentUser(project),
+    error: null,
+  };
 }
 
 export async function requestProjectJoin(
@@ -75,7 +94,7 @@ export async function requestProjectJoin(
     project.membershipStatus = 'pending';
   }
 
-  return { data: cloneProject(project), error: null };
+  return { data: await cloneProjectForCurrentUser(project), error: null };
 }
 
 export async function leaveProject(
@@ -88,29 +107,31 @@ export async function leaveProject(
   if (!project) return { data: null, error: 'Progetto non trovato' };
 
   if (project.membershipStatus !== 'member') {
-    return { data: cloneProject(project), error: null };
+    return { data: await cloneProjectForCurrentUser(project), error: null };
   }
 
   project.membershipStatus = 'none';
   project.memberIds = project.memberIds.filter((memberId) => memberId !== userId);
   project.builderCount = Math.max(0, project.builderCount - 1);
 
-  return { data: cloneProject(project), error: null };
+  return { data: await cloneProjectForCurrentUser(project), error: null };
 }
 
-export async function setProjectFollowing(
+export async function setProjectSaved(
   projectId: string,
-  isFollowing: boolean
+  isSaved: boolean
 ): Promise<ProjectServiceResult<ProjectDetail>> {
   await wait(140);
 
   const project = mockProjectDetails.find((item) => item.id === projectId);
   if (!project) return { data: null, error: 'Progetto non trovato' };
 
-  project.isFollowing = isFollowing;
-  project.followerCount += isFollowing ? 1 : -1;
+  await persistProjectSaved(CURRENT_USER_ID, projectId, isSaved);
 
-  return { data: cloneProject(project), error: null };
+  return {
+    data: cloneProject({ ...project, isSaved }),
+    error: null,
+  };
 }
 
 const toOwnedProjectDetail = (
@@ -130,6 +151,7 @@ const toOwnedProjectDetail = (
   followerCount: 0,
   builderCount: 1,
   isFollowing: true,
+  isSaved: true,
   membershipStatus: 'founder',
   openRoles: [...project.openRoles],
   updates: [

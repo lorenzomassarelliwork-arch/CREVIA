@@ -134,6 +134,12 @@ export default function createStyles(
       borderBottomWidth: 1,
       borderBottomColor: colors.divider,
     },
+    participantProfileButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
     participantRowLast: { borderBottomWidth: 0 },
     avatar: { width: 46, height: 46, borderRadius: 14 },
     avatarFallback: {

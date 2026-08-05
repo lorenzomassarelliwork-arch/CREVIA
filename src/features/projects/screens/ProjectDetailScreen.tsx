@@ -20,7 +20,7 @@ import {
   getProjectDetail,
   leaveProject,
   requestProjectJoin,
-  setProjectFollowing,
+  setProjectSaved,
 } from '../services/projectDetailService';
 import type { ProjectDetail } from '../services/projectDetailService';
 import {
@@ -33,6 +33,7 @@ import type { RootStackParamList } from '../../../navigation/types';
 import type { ColorPalette } from '../../../theme/colors';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { LocalizedText as Text } from '../../../i18n/LocalizedText';
+import { getUserAvatarUrl } from '../../users/services/userIdentityService';
 
 type ProjectDetailScreenProps = NativeStackScreenProps<
   RootStackParamList,
@@ -113,6 +114,15 @@ export default function ProjectDetailScreen({
 
   const isManager =
     project?.membershipStatus === 'founder' || project?.membershipStatus === 'admin';
+  const founderAvatarUrl = project ? getUserAvatarUrl(project.founderId) : null;
+
+  const openUserProfile = (userId: string) => {
+    if (userId === CURRENT_USER_ID) {
+      navigation.navigate('Main', { screen: 'Profile' });
+    } else {
+      navigation.navigate('PublicUserProfile', { userId });
+    }
+  };
 
   const joinProject = async () => {
     if (!project) return;
@@ -156,12 +166,12 @@ export default function ProjectDetailScreen({
     }
   };
 
-  const toggleFollowing = async () => {
+  const toggleSaved = async () => {
     if (!project) return;
 
     void triggerHaptic();
-    setActionLoading('follow');
-    const response = await setProjectFollowing(project.id, !project.isFollowing);
+    setActionLoading('save');
+    const response = await setProjectSaved(project.id, !project.isSaved);
     if (response.data) setProject(response.data);
     setActionLoading(null);
   };
@@ -283,13 +293,13 @@ export default function ProjectDetailScreen({
         <Text style={styles.headerTitle}>Progetto</Text>
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={toggleFollowing}
+          onPress={toggleSaved}
           disabled={actionLoading !== null}
         >
           <Ionicons
-            name={project.isFollowing ? 'bookmark' : 'bookmark-outline'}
+            name={project.isSaved ? 'bookmark' : 'bookmark-outline'}
             size={21}
-            color={project.isFollowing ? colors.primary : colors.gray}
+            color={project.isSaved ? colors.primary : colors.gray}
           />
         </TouchableOpacity>
       </View>
@@ -320,21 +330,23 @@ export default function ProjectDetailScreen({
 
           <TouchableOpacity
             style={styles.founderRow}
-            disabled={project.founderId === CURRENT_USER_ID}
-            onPress={() =>
-              navigation.navigate('PublicUserProfile', { userId: project.founderId })
-            }
+            onPress={() => openUserProfile(project.founderId)}
           >
             <View style={styles.founderIcon}>
-              <Ionicons name="person-outline" size={18} color={colors.primary} />
+              {founderAvatarUrl ? (
+                <Image
+                  source={{ uri: founderAvatarUrl }}
+                  style={styles.founderAvatarImage}
+                />
+              ) : (
+                <Ionicons name="person-outline" size={18} color={colors.primary} />
+              )}
             </View>
             <View style={styles.founderCopy}>
               <Text style={styles.founderLabel}>Founder</Text>
               <Text style={styles.founderName}>{project.founderName}</Text>
             </View>
-            {project.founderId !== CURRENT_USER_ID && (
-              <Ionicons name="chevron-forward" size={18} color={colors.gray} />
-            )}
+            <Ionicons name="chevron-forward" size={18} color={colors.gray} />
           </TouchableOpacity>
 
           <View style={styles.statsRow}>
@@ -502,13 +514,27 @@ export default function ProjectDetailScreen({
             posts.map((post) => (
               <View key={post.id} style={styles.postCard}>
                 <View style={styles.postHeader}>
-                  <View style={styles.postAvatar}>
-                    <Text style={styles.postAvatarText}>{getInitials(post.authorName)}</Text>
-                  </View>
-                  <View style={styles.postHeaderCopy}>
-                    <Text style={styles.postAuthor}>{post.authorName}</Text>
-                    <Text style={styles.postDate}>{formatPostDate(post.createdAt)}</Text>
-                  </View>
+                  <TouchableOpacity
+                    style={styles.postAuthorTarget}
+                    onPress={() => openUserProfile(post.authorId)}
+                  >
+                    {post.authorAvatarUri ? (
+                      <Image
+                        source={{ uri: post.authorAvatarUri }}
+                        style={styles.postAvatar}
+                      />
+                    ) : (
+                      <View style={styles.postAvatar}>
+                        <Text style={styles.postAvatarText}>
+                          {getInitials(post.authorName)}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.postHeaderCopy}>
+                      <Text style={styles.postAuthor}>{post.authorName}</Text>
+                      <Text style={styles.postDate}>{formatPostDate(post.createdAt)}</Text>
+                    </View>
+                  </TouchableOpacity>
                   <View style={styles.postBadge}>
                     <Text style={styles.postBadgeText}>{postKindLabels[post.kind]}</Text>
                   </View>
@@ -650,6 +676,7 @@ const createStyles = (
       justifyContent: 'center',
       backgroundColor: colors.border,
     },
+    founderAvatarImage: { width: '100%', height: '100%', borderRadius: 12 },
     founderCopy: { flex: 1 },
     founderLabel: { fontSize: 12, color: colors.gray },
     founderName: { fontSize: 15, fontWeight: 'bold', color: colors.secondary },
@@ -846,6 +873,12 @@ const createStyles = (
       borderColor: colors.border,
     },
     postHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    postAuthorTarget: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
     postAvatar: {
       width: 38,
       height: 38,

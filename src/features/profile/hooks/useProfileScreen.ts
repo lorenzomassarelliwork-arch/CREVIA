@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
 import {
   addExperience,
   addProject,
@@ -14,6 +15,16 @@ import {
   updateProject,
 } from '../services/profileService';
 import type { Experience, Profile, Project } from '../services/profileService';
+import {
+  addProfilePostComment,
+  createProfilePost,
+  deleteProfilePost,
+  deleteProfilePostComment,
+  listProfilePosts,
+  toggleProfilePostLike,
+  updateProfilePost,
+  type ProfilePost,
+} from '../services/profilePostService';
 import { useAppPreferences } from '../../../theme/AppPreferencesProvider';
 import { translateUi } from '../../../i18n/uiTranslations';
 
@@ -76,6 +87,7 @@ export function useProfileScreen() {
   const [draftProfile, setDraftProfile] = useState<Profile>(INITIAL_PROFILE);
   const [projects, setProjects] = useState<Project[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>('projects');
   const [loading, setLoading] = useState<boolean>(false);
   const [editingProfile, setEditingProfile] = useState<boolean>(false);
@@ -90,6 +102,12 @@ export function useProfileScreen() {
   const [showInizioPicker, setShowInizioPicker] = useState<boolean>(false);
   const [showFinePicker, setShowFinePicker] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [postEditorVisible, setPostEditorVisible] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<ProfilePost | null>(null);
+  const [postDraftBody, setPostDraftBody] = useState('');
+  const [postDraftImageUri, setPostDraftImageUri] = useState<string | null>(null);
+  const [postSaving, setPostSaving] = useState(false);
+  const [postActionLoading, setPostActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -102,16 +120,18 @@ export function useProfileScreen() {
       setLoading(true);
     }
 
-    const [profileResult, projectsResult, experiencesResult] = await Promise.all([
+    const [profileResult, projectsResult, experiencesResult, postsResult] = await Promise.all([
       getProfile(),
       getProjects(),
       getExperiences(),
+      listProfilePosts(CURRENT_USER_ID),
     ]);
 
     setProfile(profileResult.data ?? INITIAL_PROFILE);
     setDraftProfile(profileResult.data ?? INITIAL_PROFILE);
     setProjects(projectsResult.data ?? []);
     setExperiences(experiencesResult.data ?? []);
+    setPosts(postsResult.data ?? []);
 
     if (refresh) {
       setRefreshing(false);
@@ -206,6 +226,24 @@ export function useProfileScreen() {
         );
         setProfile(updatedProfile);
         if (updatedProfile) setDraftProfile(updatedProfile);
+        if (photoMenuTarget === 'foto') {
+          const currentUserId = updatedProfile?.id ?? CURRENT_USER_ID;
+          setPosts((current) =>
+            current.map((post) => ({
+              ...post,
+              authorAvatarUri:
+                post.authorId === currentUserId ? imageUri : post.authorAvatarUri,
+              comments: post.comments.map((comment) => ({
+                ...comment,
+                authorAvatarUri:
+                  comment.authorType === 'user' &&
+                  comment.authorId === currentUserId
+                    ? imageUri
+                    : comment.authorAvatarUri,
+              })),
+            }))
+          );
+        }
       } catch {
         Alert.alert('Immagine non aggiornata', 'Riprova tra poco.');
       }
@@ -439,6 +477,191 @@ export function useProfileScreen() {
     }
   }, []);
 
+  const openCreatePost = useCallback(() => {
+    setSelectedPost(null);
+    setPostDraftBody('');
+    setPostDraftImageUri(null);
+    setPostEditorVisible(true);
+  }, []);
+
+  const openEditPost = useCallback((post: ProfilePost) => {
+    setSelectedPost(post);
+    setPostDraftBody(post.body);
+    setPostDraftImageUri(post.imageUri);
+    setPostEditorVisible(true);
+  }, []);
+
+  const closePostEditor = useCallback(() => {
+    if (postSaving) return;
+    setPostEditorVisible(false);
+    setSelectedPost(null);
+    setPostDraftBody('');
+    setPostDraftImageUri(null);
+  }, [postSaving]);
+
+  const pickPostImage = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Permesso richiesto',
+        'Consenti a Crevia di accedere alle foto per allegare un’immagine al post.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+
+    if (!result.canceled) {
+      setPostDraftImageUri(result.assets[0]?.uri ?? null);
+    }
+  }, []);
+
+  const savePost = useCallback(async () => {
+    const authorId = profile?.id ?? CURRENT_USER_ID;
+    const authorName = profile?.nome ?? 'Luca Rossi';
+    setPostSaving(true);
+
+    const response = selectedPost
+      ? await updateProfilePost(selectedPost.id, authorId, {
+          body: postDraftBody,
+          imageUri: postDraftImageUri,
+        })
+      : await createProfilePost(authorId, authorName, {
+          body: postDraftBody,
+          imageUri: postDraftImageUri,
+        }, profile?.foto ?? null);
+
+    setPostSaving(false);
+
+    if (response.error || !response.data) {
+      Alert.alert('Post non salvato', response.error ?? 'Riprova tra poco.');
+      return;
+    }
+
+    const savedPost = response.data;
+    setPosts((current) =>
+      selectedPost
+        ? current.map((post) =>
+            post.id === savedPost.id ? savedPost : post
+          )
+        : [savedPost, ...current]
+    );
+    closePostEditor();
+  }, [closePostEditor, postDraftBody, postDraftImageUri, profile, selectedPost]);
+
+  const removePost = useCallback(
+    (postId: string) => {
+      Alert.alert(
+        'Eliminare il post?',
+        'Il post verrà rimosso definitivamente dal tuo profilo.',
+        [
+          { text: translateUi('Annulla', language), style: 'cancel' },
+          {
+            text: translateUi('Elimina', language),
+            style: 'destructive',
+            onPress: async () => {
+              const authorId = profile?.id ?? CURRENT_USER_ID;
+              setPostActionLoading(`${postId}-delete`);
+              const response = await deleteProfilePost(postId, authorId);
+              if (!response.error) {
+                setPosts((current) => current.filter((post) => post.id !== postId));
+              }
+              setPostActionLoading(null);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    },
+    [language, profile?.id]
+  );
+
+  const togglePostLike = useCallback(
+    async (postId: string) => {
+      const userId = profile?.id ?? CURRENT_USER_ID;
+      setPostActionLoading(`${postId}-like`);
+      const response = await toggleProfilePostLike(postId, userId);
+      if (response.data) {
+        setPosts((current) =>
+          current.map((post) => (post.id === postId ? response.data as ProfilePost : post))
+        );
+      }
+      setPostActionLoading(null);
+    },
+    [profile?.id]
+  );
+
+  const addPostComment = useCallback(
+    async (postId: string, body: string) => {
+      const userId = profile?.id ?? CURRENT_USER_ID;
+      const authorName = profile?.nome ?? 'Luca Rossi';
+      setPostActionLoading(`${postId}-comment`);
+      const response = await addProfilePostComment(
+        postId,
+        userId,
+        authorName,
+        body,
+        profile?.foto ?? null
+      );
+      if (response.data) {
+        setPosts((current) =>
+          current.map((post) => (post.id === postId ? response.data as ProfilePost : post))
+        );
+      } else if (response.error) {
+        Alert.alert('Commento non pubblicato', response.error);
+      }
+      setPostActionLoading(null);
+      return Boolean(response.data);
+    },
+    [profile?.foto, profile?.id, profile?.nome]
+  );
+
+  const removePostComment = useCallback(
+    (postId: string, commentId: string) => {
+      Alert.alert(
+        'Eliminare il commento?',
+        'Il commento verrà rimosso dal post.',
+        [
+          { text: translateUi('Annulla', language), style: 'cancel' },
+          {
+            text: translateUi('Elimina', language),
+            style: 'destructive',
+            onPress: async () => {
+              const userId = profile?.id ?? CURRENT_USER_ID;
+              setPostActionLoading(
+                `${postId}-comment-delete-${commentId}`
+              );
+              const response = await deleteProfilePostComment(
+                postId,
+                commentId,
+                userId
+              );
+              if (response.data) {
+                setPosts((current) =>
+                  current.map((post) =>
+                    post.id === postId
+                      ? (response.data as ProfilePost)
+                      : post
+                  )
+                );
+              } else if (response.error) {
+                Alert.alert('Commento non eliminato', response.error);
+              }
+              setPostActionLoading(null);
+            },
+          },
+        ],
+        { cancelable: true }
+      );
+    },
+    [language, profile?.id]
+  );
+
   const formattedExperiences = useMemo<FormattedExperience[]>(
     () =>
       experiences.map((item) => ({
@@ -453,6 +676,7 @@ export function useProfileScreen() {
     draftProfile,
     projects,
     experiences: formattedExperiences,
+    posts,
     activeTab,
     loading,
     editingProfile,
@@ -496,5 +720,22 @@ export function useProfileScreen() {
     savePrivacySettings,
     refreshing,
     refreshProfileData,
+    postEditorVisible,
+    selectedPost,
+    postDraftBody,
+    postDraftImageUri,
+    postSaving,
+    postActionLoading,
+    openCreatePost,
+    openEditPost,
+    closePostEditor,
+    setPostDraftBody,
+    setPostDraftImageUri,
+    pickPostImage,
+    savePost,
+    removePost,
+    togglePostLike,
+    addPostComment,
+    removePostComment,
   };
 }

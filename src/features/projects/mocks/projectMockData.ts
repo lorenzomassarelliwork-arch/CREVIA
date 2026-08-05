@@ -16,6 +16,7 @@ export const mockProjectDetails: ProjectDetail[] = [
     followerCount: 184,
     builderCount: 12,
     isFollowing: true,
+    isSaved: true,
     membershipStatus: 'member',
     openRoles: ['Mobile developer', 'Backend developer', 'UI designer'],
     updates: [
@@ -37,6 +38,7 @@ export const mockProjectDetails: ProjectDetail[] = [
     followerCount: 97,
     builderCount: 8,
     isFollowing: false,
+    isSaved: false,
     membershipStatus: 'none',
     openRoles: ['Marketing', 'Research analyst', 'Content creator'],
     updates: [
@@ -58,6 +60,7 @@ export const mockProjectDetails: ProjectDetail[] = [
     followerCount: 246,
     builderCount: 24,
     isFollowing: false,
+    isSaved: false,
     membershipStatus: 'none',
     openRoles: ['UX researcher', 'Visual designer', 'No-code builder'],
     updates: [
@@ -79,6 +82,7 @@ export const mockProjectDetails: ProjectDetail[] = [
     followerCount: 63,
     builderCount: 6,
     isFollowing: true,
+    isSaved: true,
     membershipStatus: 'founder',
     openRoles: ['Data analyst', 'Backend developer', 'Product manager'],
     updates: [

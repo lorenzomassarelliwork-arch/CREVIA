@@ -5,6 +5,10 @@ import {
   updateProjectDetailFromProfileProject,
 } from '../../projects/services/projectDetailService';
 import type { AppLanguage } from '../../../theme/AppPreferencesProvider';
+import {
+  getUserAvatarUrl,
+  updateUserIdentity,
+} from '../../users/services/userIdentityService';
 
 export type Profile = {
   id?: string;
@@ -85,7 +89,7 @@ let fakeProfile: Profile = {
   settore: 'Prodotti Digitali',
   bio: 'Appassionato di UX e startup digitali con una forte propensione al design e ai progetti che uniscono creatività e tecnologia.',
   bioLanguage: 'it',
-  foto: null,
+  foto: getUserAvatarUrl(CURRENT_USER_ID),
   fotoCopertina:
     'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80',
   collegamenti: 128,
@@ -142,7 +146,7 @@ let fakeConnections: ProfileSocialUser[] = [
     id: 'user-marco',
     displayName: 'Marco Rossi',
     role: 'Sviluppatore Frontend',
-    avatarUrl: null,
+    avatarUrl: getUserAvatarUrl('user-marco'),
     isOnline: true,
     isFollowedByCurrentUser: true,
   },
@@ -150,7 +154,7 @@ let fakeConnections: ProfileSocialUser[] = [
     id: 'user-sara',
     displayName: 'Sara Bianchi',
     role: 'UX Designer',
-    avatarUrl: null,
+    avatarUrl: getUserAvatarUrl('user-sara'),
     isOnline: false,
     isFollowedByCurrentUser: true,
   },
@@ -158,7 +162,7 @@ let fakeConnections: ProfileSocialUser[] = [
     id: 'user-luca',
     displayName: 'Luca Ferrari',
     role: 'Data Analyst',
-    avatarUrl: null,
+    avatarUrl: getUserAvatarUrl('user-luca'),
     isOnline: false,
     isFollowedByCurrentUser: false,
   },
@@ -169,7 +173,7 @@ let fakeFollowers: ProfileSocialUser[] = [
     id: 'user-giulia',
     displayName: 'Giulia Marino',
     role: 'Marketing Specialist',
-    avatarUrl: null,
+    avatarUrl: getUserAvatarUrl('user-giulia'),
     isOnline: true,
     isFollowedByCurrentUser: true,
   },
@@ -177,7 +181,7 @@ let fakeFollowers: ProfileSocialUser[] = [
     id: 'user-andrea',
     displayName: 'Andrea Conti',
     role: 'Product Designer',
-    avatarUrl: null,
+    avatarUrl: getUserAvatarUrl('user-andrea'),
     isOnline: false,
     isFollowedByCurrentUser: false,
   },
@@ -201,6 +205,7 @@ let fakeAppPreferences: AppPreferences = {
 export async function getProfile(): Promise<ServiceResult<Profile>> {
   await delay(250);
   syncSocialCounts();
+  fakeProfile = { ...fakeProfile, foto: getUserAvatarUrl(CURRENT_USER_ID) };
   return { data: { ...fakeProfile } };
 }
 
@@ -209,6 +214,11 @@ export async function updateProfile(
 ): Promise<ServiceResult<Profile>> {
   await delay(250);
   fakeProfile = { ...fakeProfile, ...profile };
+  updateUserIdentity(CURRENT_USER_ID, {
+    ...(profile.nome !== undefined ? { displayName: profile.nome } : {}),
+    ...(profile.ruolo !== undefined ? { role: profile.ruolo } : {}),
+    ...(profile.foto !== undefined ? { avatarUrl: profile.foto ?? null } : {}),
+  });
   syncSocialCounts();
   return { data: { ...fakeProfile }, error: null };
 }
@@ -227,6 +237,10 @@ export async function completeBuilderProfile(
     isBuilder: true,
     builderProfileCompleted: true,
   };
+  updateUserIdentity(CURRENT_USER_ID, {
+    displayName: profile.nome,
+    role: profile.ruolo,
+  });
 
   return { data: { ...fakeProfile }, error: null };
 }

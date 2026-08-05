@@ -143,6 +143,24 @@ export default function ConversationScreen({
       ),
     [conversation]
   );
+  const participantsById = useMemo(
+    () =>
+      new Map(
+        conversation?.participants.map((participant) => [
+          participant.id,
+          participant,
+        ]) ?? []
+      ),
+    [conversation]
+  );
+
+  const openParticipantProfile = (userId: string) => {
+    if (userId === CURRENT_USER_ID) {
+      navigation.navigate('Main', { screen: 'Profile' });
+    } else {
+      navigation.navigate('PublicUserProfile', { userId });
+    }
+  };
 
   const getSenderName = (senderId: string) =>
     senderId === CURRENT_USER_ID
@@ -387,6 +405,8 @@ export default function ConversationScreen({
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isOwn = item.senderId === CURRENT_USER_ID;
+    const sender = participantsById.get(item.senderId);
+    const showSenderAvatar = conversation?.kind === 'group' && !isOwn && sender;
     const time = new Intl.DateTimeFormat(language === 'it' ? 'it-IT' : 'en-US', {
       hour: '2-digit',
       minute: '2-digit',
@@ -400,6 +420,37 @@ export default function ConversationScreen({
           isOwn ? styles.messageGroupOwn : styles.messageGroupOther,
         ]}
       >
+        <View
+          style={[
+            styles.messageContentRow,
+            isOwn && styles.messageContentRowOwn,
+          ]}
+        >
+          {showSenderAvatar && (
+            <TouchableOpacity
+              activeOpacity={0.72}
+              style={styles.messageSenderAvatarButton}
+              onPress={() => openParticipantProfile(sender.id)}
+            >
+              {sender.avatarUrl ? (
+                <Image
+                  source={{ uri: sender.avatarUrl }}
+                  style={styles.messageSenderAvatar}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.messageSenderAvatar,
+                    styles.messageSenderAvatarFallback,
+                  ]}
+                >
+                  <Text style={styles.messageSenderInitials}>
+                    {getInitials(sender.displayName)}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
         <TouchableOpacity
           activeOpacity={0.86}
           delayLongPress={250}
@@ -506,6 +557,7 @@ export default function ConversationScreen({
             ) : null}
           </View>
         </TouchableOpacity>
+        </View>
 
         {item.reactions.length > 0 && (
           <View style={styles.reactionsRow}>

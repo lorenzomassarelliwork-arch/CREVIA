@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -28,6 +30,15 @@ import type { ProjectDetail } from '../services/projectDetailService';
 import type { PublicUserProfile } from '../../users/services/userService';
 import type { SearchPresetKey } from '../../search/services/searchService';
 import { getNotificationInboxSummary } from '../../notifications/services/notificationService';
+import {
+  addFollowedFeedPostComment,
+  deleteFollowedFeedPostComment,
+  reportFollowedFeedPost,
+  toggleFollowedFeedPostLike,
+  type FollowedFeedPost,
+} from '../services/followedFeedService';
+import { CURRENT_USER_ID } from '../../chat/services/chatService';
+import FollowedFeedPostCard from '../components/FollowedFeedPostCard';
 
 type HomeScreenProps = CompositeScreenProps<
   MaterialTopTabScreenProps<MainTabParamList, 'Home'>,
@@ -56,18 +67,15 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
   const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [feedActionLoading, setFeedActionLoading] = useState<string | null>(null);
 
-  const loadData = async (refresh = false) => {
+  const loadData = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
 
     const response = await getHomeDiscovery();
     setHomeData(response.data);
 
     refresh ? setRefreshing(false) : setLoading(false);
-  };
-
-  useEffect(() => {
-    void loadData();
   }, []);
 
   useFocusEffect(
@@ -81,12 +89,13 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         }
       };
 
+      void loadData();
       void loadNotificationSummary();
 
       return () => {
         isActive = false;
       };
-    }, [])
+    }, [loadData])
   );
 
   const openProject = (projectId: string) => {
@@ -95,6 +104,105 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
 
   const openUser = (userId: string) => {
     navigation.navigate('PublicUserProfile', { userId });
+  };
+
+  const openFeedEntity = (
+    entityType: 'user' | 'project',
+    entityId: string
+  ) => {
+    if (entityType === 'project') {
+      openProject(entityId);
+    } else if (entityId === CURRENT_USER_ID) {
+      navigation.navigate('Profile');
+    } else {
+      openUser(entityId);
+    }
+  };
+
+  const updateFeedPost = (updatedPost: FollowedFeedPost) => {
+    setHomeData((current) =>
+      current
+        ? {
+            ...current,
+            followedFeed: current.followedFeed.map((post) =>
+              post.id === updatedPost.id ? updatedPost : post
+            ),
+          }
+        : current
+    );
+  };
+
+  const toggleFeedPostLike = async (post: FollowedFeedPost) => {
+    setFeedActionLoading(`${post.id}-like`);
+    const response = await toggleFollowedFeedPostLike(post, CURRENT_USER_ID);
+    if (response.data) updateFeedPost(response.data);
+    if (response.error) Alert.alert('Azione non riuscita', response.error);
+    setFeedActionLoading(null);
+  };
+
+  const addFeedPostComment = async (post: FollowedFeedPost, body: string) => {
+    if (!homeData) return false;
+    setFeedActionLoading(`${post.id}-comment`);
+    const response = await addFollowedFeedPostComment(
+      post,
+      {
+        id: CURRENT_USER_ID,
+        name: homeData.currentUserName,
+        avatarUri: homeData.currentUserAvatarUri,
+      },
+      body
+    );
+    if (response.data) updateFeedPost(response.data);
+    if (response.error) Alert.alert('Commento non pubblicato', response.error);
+    setFeedActionLoading(null);
+    return Boolean(response.data);
+  };
+
+  const removeFeedPostComment = (
+    post: FollowedFeedPost,
+    commentId: string
+  ) => {
+    Alert.alert(
+      'Eliminare il commento?',
+      'Il commento verrà rimosso dal post.',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Elimina',
+          style: 'destructive',
+          onPress: async () => {
+            setFeedActionLoading(`${post.id}-comment-delete-${commentId}`);
+            const response = await deleteFollowedFeedPostComment(
+              post,
+              commentId,
+              CURRENT_USER_ID
+            );
+            if (response.data) updateFeedPost(response.data);
+            if (response.error) {
+              Alert.alert('Commento non eliminato', response.error);
+            }
+            setFeedActionLoading(null);
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const reportFeedPost = async (post: FollowedFeedPost) => {
+    setFeedActionLoading(`${post.id}-report`);
+    const response = await reportFollowedFeedPost(post, CURRENT_USER_ID);
+    if (response.data) {
+      updateFeedPost(response.data);
+      Alert.alert(
+        'Segnalazione inviata',
+        'Grazie. Il team di Crevia verificherà il contenuto.'
+      );
+    } else if (response.error) {
+      Alert.alert('Segnalazione non inviata', response.error);
+    }
+    setFeedActionLoading(null);
+    return Boolean(response.data);
   };
 
   const openSearch = (preset?: SearchPresetKey) => {
@@ -173,7 +281,11 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
       onPress={() => openUser(user.id)}
     >
       <View style={styles.builderAvatar}>
-        <Text style={styles.builderInitials}>{getInitials(user.displayName)}</Text>
+        {user.avatarUrl ? (
+          <Image source={{ uri: user.avatarUrl }} style={styles.builderAvatarImage} />
+        ) : (
+          <Text style={styles.builderInitials}>{getInitials(user.displayName)}</Text>
+        )}
         {user.isOnline && <View style={styles.onlineDot} />}
       </View>
       <Text numberOfLines={1} style={styles.builderName}>
@@ -186,6 +298,20 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         {user.citta} - {user.settore}
       </Text>
     </TouchableOpacity>
+  );
+
+  const renderFollowedPost = (post: FollowedFeedPost) => (
+    <FollowedFeedPostCard
+      key={post.id}
+      post={post}
+      currentUserId={CURRENT_USER_ID}
+      actionLoading={feedActionLoading}
+      onToggleLike={toggleFeedPostLike}
+      onAddComment={addFeedPostComment}
+      onDeleteComment={removeFeedPostComment}
+      onReport={reportFeedPost}
+      onOpenEntity={openFeedEntity}
+    />
   );
 
   if (loading || !homeData) {
@@ -286,31 +412,28 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           </ScrollView>
         </View>
 
-        <View style={styles.quickGrid}>
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => openSearch('formingTeams')}
-          >
-            <Ionicons name="rocket-outline" size={20} color={colors.primary} />
-            <View style={styles.quickCopy}>
-              <Text style={styles.quickTitle}>Team in formazione</Text>
-              <Text style={styles.quickSubtitle}>
-                {homeData.formingTeams.length} progetti cercano builder
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Progetti salvati</Text>
+          </View>
+          {homeData.savedProjects.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {homeData.savedProjects.map((project) =>
+                renderProjectCard(project, 'large')
+              )}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptySavedCard}>
+              <Ionicons name="bookmark-outline" size={24} color={colors.gray} />
+              <Text style={styles.emptySavedText}>
+                I progetti che salvi appariranno qui.
               </Text>
             </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => openSearch('nearbyProjects')}
-          >
-            <Ionicons name="location-outline" size={20} color={colors.primary} />
-            <View style={styles.quickCopy}>
-              <Text style={styles.quickTitle}>Vicino a te</Text>
-              <Text style={styles.quickSubtitle}>
-                {homeData.nearbyProjects.length} opportunita a Milano
-              </Text>
-            </View>
-          </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -330,10 +453,17 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dai tuoi progetti</Text>
+          <Text style={styles.sectionTitle}>Dai tuoi seguiti</Text>
           <View style={styles.verticalList}>
-            {homeData.followedProjects.slice(0, 3).map((project) =>
-              renderProjectCard(project)
+            {homeData.followedFeed.length > 0 ? (
+              homeData.followedFeed.map(renderFollowedPost)
+            ) : (
+              <View style={styles.emptySavedCard}>
+                <Ionicons name="newspaper-outline" size={24} color={colors.gray} />
+                <Text style={styles.emptySavedText}>
+                  I post dei tuoi seguiti appariranno qui.
+                </Text>
+              </View>
             )}
           </View>
         </View>
@@ -513,20 +643,6 @@ const createStyles = (
     projectStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     projectStatText: { fontSize: 12, color: colors.gray, fontWeight: '600' },
     discoverText: { fontSize: 13, color: colors.primary, fontWeight: 'bold' },
-    quickGrid: { gap: 10 },
-    quickCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      padding: 14,
-      borderRadius: 14,
-      backgroundColor: colors.cardBackground,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    quickCopy: { flex: 1, gap: 2 },
-    quickTitle: { fontSize: 15, fontWeight: 'bold', color: colors.secondary },
-    quickSubtitle: { fontSize: 13, color: colors.gray },
     builderCard: {
       width: 142,
       minHeight: 154,
@@ -550,6 +666,11 @@ const createStyles = (
       color: colors.primary,
       fontSize: 16,
       fontWeight: 'bold',
+    },
+    builderAvatarImage: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 16,
     },
     onlineDot: {
       position: 'absolute',
@@ -576,4 +697,21 @@ const createStyles = (
     },
     builderMeta: { fontSize: 12, color: colors.gray, textAlign: 'center' },
     verticalList: { gap: 12 },
+    emptySavedCard: {
+      minHeight: 92,
+      padding: 18,
+      borderRadius: 14,
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    emptySavedText: {
+      color: colors.textMuted,
+      fontSize: 13,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
   });

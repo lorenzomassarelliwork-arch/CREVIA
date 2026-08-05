@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type ComponentProps } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -9,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import PagerView from 'react-native-pager-view';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -44,6 +53,13 @@ const FILTERS: { key: NotificationCategory; label: string }[] = [
   { key: 'projects', label: 'Progetti' },
 ];
 
+const FILTER_INDEX: Record<NotificationCategory, number> = {
+  all: 0,
+  requests: 1,
+  suggestions: 2,
+  projects: 3,
+};
+
 const TYPE_ICONS: Record<NotificationType, IconName> = {
   connection_request: 'person-add-outline',
   message_request: 'mail-unread-outline',
@@ -78,31 +94,47 @@ export default function NotificationsScreen({
   );
   const [selectedCategory, setSelectedCategory] =
     useState<NotificationCategory>('all');
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const pagerRef = useRef<PagerView>(null);
+  const [notificationsByCategory, setNotificationsByCategory] = useState<
+    Record<NotificationCategory, NotificationItem[]>
+  >({ all: [], requests: [], suggestions: [], projects: [] });
+  const [loadingCategory, setLoadingCategory] =
+    useState<NotificationCategory | null>('all');
+  const [refreshingCategory, setRefreshingCategory] =
+    useState<NotificationCategory | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const loadNotifications = useCallback(
-    async (category = selectedCategory, refresh = false) => {
-      refresh ? setRefreshing(true) : setLoading(true);
+    async (category: NotificationCategory, refresh = false) => {
+      refresh ? setRefreshingCategory(category) : setLoadingCategory(category);
       const response = await listNotifications(category);
-      setNotifications(response.data ?? []);
-      setLoading(false);
-      setRefreshing(false);
+      setNotificationsByCategory((current) => ({
+        ...current,
+        [category]: response.data ?? [],
+      }));
+      if (refresh) {
+        setRefreshingCategory((current) =>
+          current === category ? null : current
+        );
+      } else {
+        setLoadingCategory((current) => (current === category ? null : current));
+      }
     },
-    [selectedCategory]
+    []
   );
 
   useEffect(() => {
-    void loadNotifications();
+    void loadNotifications('all');
   }, [loadNotifications]);
 
-  const refreshCurrentCategory = async () => {
-    await loadNotifications(selectedCategory, true);
+  const selectCategory = (category: NotificationCategory) => {
+    pagerRef.current?.setPage(FILTER_INDEX[category]);
   };
 
-  const selectCategory = (category: NotificationCategory) => {
+  const handlePageSelected = (page: number) => {
+    const category = FILTERS[page]?.key;
+    if (!category) return;
+
     setSelectedCategory(category);
     void loadNotifications(category);
   };
@@ -216,11 +248,21 @@ export default function NotificationsScreen({
       >
         <View style={styles.notificationTop}>
           <View style={styles.iconWrap}>
-            <Ionicons
-              name={TYPE_ICONS[notification.type]}
-              size={20}
-              color={colors.primary}
-            />
+            {notification.actor?.avatarUrl ? (
+              <Image
+                source={{ uri: notification.actor.avatarUrl }}
+                style={styles.actorAvatar}
+              />
+            ) : (
+              <Ionicons
+                name={TYPE_ICONS[notification.type]}
+                size={20}
+                color={colors.primary}
+              />
+            )}
+            {notification.actor?.isOnline && (
+              <View style={styles.actorOnlineDot} />
+            )}
           </View>
           <View style={styles.notificationCopy}>
             <View style={styles.titleRow}>
@@ -307,18 +349,7 @@ export default function NotificationsScreen({
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void refreshCurrentCategory()}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.filtersContainer}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -344,27 +375,61 @@ export default function NotificationsScreen({
             );
           })}
         </ScrollView>
+      </View>
 
-        {loading ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator color={colors.primary} size="large" />
-          </View>
-        ) : notifications.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="notifications-outline"
-              size={42}
-              color={colors.gray}
-            />
-            <Text style={styles.emptyTitle}>Nessuna notifica</Text>
-            <Text style={styles.emptyText}>
-              Qui troverai richieste, suggerimenti e aggiornamenti dai progetti.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.list}>{notifications.map(renderNotification)}</View>
-        )}
-      </ScrollView>
+      <PagerView
+        ref={pagerRef}
+        style={styles.pager}
+        initialPage={FILTER_INDEX.all}
+        onPageSelected={(event) =>
+          handlePageSelected(event.nativeEvent.position)
+        }
+      >
+        {FILTERS.map((filter) => {
+          const categoryNotifications = notificationsByCategory[filter.key];
+          const isLoading = loadingCategory === filter.key;
+          const isRefreshing = refreshingCategory === filter.key;
+
+          return (
+            <View key={filter.key} style={styles.page}>
+              <ScrollView
+                contentContainerStyle={styles.pageScroll}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={() => void loadNotifications(filter.key, true)}
+                    colors={[colors.primary]}
+                    tintColor={colors.primary}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
+              >
+                {isLoading ? (
+                  <View style={styles.centerState}>
+                    <ActivityIndicator color={colors.primary} size="large" />
+                  </View>
+                ) : categoryNotifications.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons
+                      name="notifications-outline"
+                      size={42}
+                      color={colors.gray}
+                    />
+                    <Text style={styles.emptyTitle}>Nessuna notifica</Text>
+                    <Text style={styles.emptyText}>
+                      Qui troverai richieste, suggerimenti e aggiornamenti dai progetti.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.list}>
+                    {categoryNotifications.map(renderNotification)}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          );
+        })}
+      </PagerView>
     </View>
   );
 }
@@ -399,12 +464,17 @@ const createStyles = (
       fontWeight: 'bold',
       color: colors.secondary,
     },
-    scroll: {
-      padding: 20,
-      gap: 14,
+    filtersContainer: {
+      paddingTop: 20,
+      paddingBottom: 14,
+    },
+    filterRow: { gap: 8, paddingHorizontal: 20, paddingRight: 40 },
+    pager: { flex: 1 },
+    page: { flex: 1 },
+    pageScroll: {
+      paddingHorizontal: 20,
       paddingBottom: 88 + Math.max(bottomInset, 10),
     },
-    filterRow: { gap: 8, paddingRight: 20 },
     filterButton: {
       height: 38,
       paddingHorizontal: 14,
@@ -472,6 +542,19 @@ const createStyles = (
       justifyContent: 'center',
       borderWidth: 1,
       borderColor: colors.border,
+      position: 'relative',
+    },
+    actorAvatar: { width: '100%', height: '100%', borderRadius: 12 },
+    actorOnlineDot: {
+      position: 'absolute',
+      right: -2,
+      bottom: -2,
+      width: 11,
+      height: 11,
+      borderRadius: 6,
+      backgroundColor: colors.confirm,
+      borderWidth: 2,
+      borderColor: colors.cardBackground,
     },
     notificationCopy: { flex: 1, gap: 3 },
     titleRow: {

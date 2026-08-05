@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -268,7 +269,9 @@ export default function SearchScreen({ navigation, route }: SearchScreenProps) {
             onPress={() => openResult(item)}
           >
             <View style={styles.cardAvatar}>
-              {item.type === 'user' ? (
+              {item.type === 'user' && item.avatarUrl ? (
+                <Image source={{ uri: item.avatarUrl }} style={styles.cardAvatarImage} />
+              ) : item.type === 'user' ? (
                 <Ionicons name="person" size={22} color={colors.primary} />
               ) : (
                 <FontAwesome5 name="building" size={18} color={colors.primary} />
@@ -522,6 +525,11 @@ const createStyles = (
       backgroundColor: colors.border,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    cardAvatarImage: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 12,
     },
     onlineDot: {
       position: 'absolute',

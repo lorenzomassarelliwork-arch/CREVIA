@@ -183,14 +183,30 @@ export default function ContactInfoScreen({
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          {contact.avatarUrl ? (
-            <Image source={{ uri: contact.avatarUrl }} style={styles.contactAvatar} />
-          ) : (
-            <View style={[styles.contactAvatar, styles.contactAvatarFallback]}>
-              <Text style={styles.contactInitials}>{getInitials(contact.displayName)}</Text>
-            </View>
-          )}
-          <Text style={styles.contactName}>{contact.displayName}</Text>
+          <TouchableOpacity
+            accessibilityLabel={`Apri il profilo di ${contact.displayName}`}
+            accessibilityRole="button"
+            activeOpacity={0.75}
+            onPress={() =>
+              navigation.navigate('PublicUserProfile', { userId: contact.id })
+            }
+          >
+            {contact.avatarUrl ? (
+              <Image source={{ uri: contact.avatarUrl }} style={styles.contactAvatar} />
+            ) : (
+              <View style={[styles.contactAvatar, styles.contactAvatarFallback]}>
+                <Text style={styles.contactInitials}>{getInitials(contact.displayName)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={() =>
+              navigation.navigate('PublicUserProfile', { userId: contact.id })
+            }
+          >
+            <Text style={styles.contactName}>{contact.displayName}</Text>
+          </TouchableOpacity>
           <Text style={styles.contactRole}>{contact.role}</Text>
           <View style={styles.presenceRow}>
             <View

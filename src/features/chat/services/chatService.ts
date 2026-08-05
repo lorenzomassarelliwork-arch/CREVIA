@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   ChatRealtimeEvent,
   ChatService,
+  ChatUser,
   CreateGroupConversationInput,
   ConversationDetails,
   ConversationPage,
@@ -13,74 +14,27 @@ import type {
   SendMessageInput,
   SearchChatUsersOptions,
 } from '../types';
+import {
+  getUserIdentity,
+  listUserIdentities,
+} from '../../users/services/userIdentityService';
 
 export const CURRENT_USER_ID = 'current-user';
 
-const currentUser = {
-  id: CURRENT_USER_ID,
-  displayName: 'Lorenzo Rossi',
-  role: 'Sviluppatore Mobile',
-  avatarUrl: null,
-  isOnline: true,
+const requireChatUser = (userId: string): ChatUser => {
+  const identity = getUserIdentity(userId);
+  if (!identity) throw new Error(`Missing chat identity: ${userId}`);
+  return identity;
 };
 
-const marco = {
-  id: 'user-marco',
-  displayName: 'Marco Rossi',
-  role: 'Sviluppatore',
-  avatarUrl: null,
-  isOnline: true,
-};
+const currentUser = requireChatUser(CURRENT_USER_ID);
+const marco = requireChatUser('user-marco');
+const sara = requireChatUser('user-sara');
+const luca = requireChatUser('user-luca');
 
-const sara = {
-  id: 'user-sara',
-  displayName: 'Sara Bianchi',
-  role: 'UX Designer',
-  avatarUrl: null,
-  isOnline: false,
-};
-
-const luca = {
-  id: 'user-luca',
-  displayName: 'Luca Ferrari',
-  role: 'Data Analyst',
-  avatarUrl: null,
-  isOnline: false,
-};
-
-const chatUserDirectory = [
-  marco,
-  sara,
-  luca,
-  {
-    id: 'user-giulia',
-    displayName: 'Giulia Marino',
-    role: 'Marketing Specialist',
-    avatarUrl: null,
-    isOnline: true,
-  },
-  {
-    id: 'user-andrea',
-    displayName: 'Andrea Conti',
-    role: 'Product Designer',
-    avatarUrl: null,
-    isOnline: false,
-  },
-  {
-    id: 'user-elisa',
-    displayName: 'Elisa Romano',
-    role: 'Project Manager',
-    avatarUrl: null,
-    isOnline: true,
-  },
-  {
-    id: 'user-davide',
-    displayName: 'Davide Greco',
-    role: 'Backend Developer',
-    avatarUrl: null,
-    isOnline: false,
-  },
-];
+const chatUserDirectory: ChatUser[] = listUserIdentities().filter(
+  (identity) => identity.id !== CURRENT_USER_ID
+);
 
 const now = Date.now();
 const minutesAgo = (minutes: number) =>
@@ -265,11 +219,22 @@ function getGroupConversation(conversationId: string) {
   return conversation;
 }
 
+function hydrateChatUser(user: ChatUser): ChatUser {
+  return getUserIdentity(user.id) ?? { ...user };
+}
+
+function hydrateConversation(conversation: ChatConversation): ChatConversation {
+  return {
+    ...conversation,
+    participants: conversation.participants.map(hydrateChatUser),
+  };
+}
+
 function replaceConversation(updated: ChatConversation) {
   conversations = conversations.map((conversation) =>
     conversation.id === updated.id ? updated : conversation
   );
-  return updated;
+  return hydrateConversation(updated);
 }
 
 function scheduleStatusUpdate(message: ChatMessage) {
@@ -314,7 +279,7 @@ const mockChatService: ChatService = {
           !isAlreadyInDirectConversation) &&
         !excludedConversationParticipantIds.has(user.id)
       );
-    });
+    }).map(hydrateChatUser);
   },
 
   async createDirectConversation(userId: string) {
@@ -323,7 +288,7 @@ const mockChatService: ChatService = {
         conversation.kind === 'direct' &&
         conversation.participants.some((participant) => participant.id === userId)
     );
-    if (existingConversation) return existingConversation;
+    if (existingConversation) return hydrateConversation(existingConversation);
 
     const participant = chatUserDirectory.find((user) => user.id === userId);
     if (!participant) throw new Error('User not found');
@@ -346,7 +311,7 @@ const mockChatService: ChatService = {
       updatedAt: createdAt,
     };
     conversations = [conversation, ...conversations];
-    return conversation;
+    return hydrateConversation(conversation);
   },
 
   async createGroupConversation(input: CreateGroupConversationInput) {
@@ -377,7 +342,7 @@ const mockChatService: ChatService = {
       updatedAt: createdAt,
     };
     conversations = [conversation, ...conversations];
-    return conversation;
+    return hydrateConversation(conversation);
   },
 
   async updateGroupImage(conversationId: string, avatarUrl: string) {
@@ -428,7 +393,7 @@ const mockChatService: ChatService = {
         if (!participant) throw new Error('User not found');
         return participant;
       });
-    if (participantsToAdd.length === 0) return conversation;
+    if (participantsToAdd.length === 0) return hydrateConversation(conversation);
 
     return replaceConversation({
       ...conversation,
@@ -462,7 +427,7 @@ const mockChatService: ChatService = {
 
   async leaveGroup(conversationId: string) {
     const conversation = getGroupConversation(conversationId);
-    if (conversation.currentUserHasLeft) return conversation;
+    if (conversation.currentUserHasLeft) return hydrateConversation(conversation);
 
     let mainUserIds = conversation.mainUserIds.filter(
       (userId) => userId !== CURRENT_USER_ID
@@ -572,7 +537,7 @@ const mockChatService: ChatService = {
       items: chatUserDirectory
         .filter((user) => globallyBlockedUsers.has(user.id))
         .map((user) => ({
-          user,
+          user: hydrateChatUser(user),
           blockedAt: globallyBlockedUsers.get(user.id) as string,
         }))
         .sort(
@@ -636,7 +601,7 @@ const mockChatService: ChatService = {
       items: [...conversations].sort((left, right) => {
         if (left.isPinned !== right.isPinned) return left.isPinned ? -1 : 1;
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
-      }),
+      }).map(hydrateConversation),
       nextCursor: null,
     };
   },
@@ -650,7 +615,7 @@ const mockChatService: ChatService = {
     if (!conversation) throw new Error('Conversation not found');
 
     return {
-      conversation,
+      conversation: hydrateConversation(conversation),
       messages: messages
         .filter((message) => message.conversationId === conversationId)
         .sort(
@@ -676,7 +641,7 @@ const mockChatService: ChatService = {
       )
       .slice(-6);
 
-    return { conversation, messages: previewMessages };
+    return { conversation: hydrateConversation(conversation), messages: previewMessages };
   },
 
   async listMessages(
